@@ -1,5 +1,6 @@
 package com.damsotplugin;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
@@ -24,7 +26,6 @@ public class magicCerebrum implements Listener {
 
     private final DamsotPlugin plugin;
 
-    
     private final Map<UUID, Long> justiceCooldowns = new HashMap<>();
     private final Map<UUID, Long> prosvecticoCooldowns = new HashMap<>();
     private final Map<UUID, Long> reaktimCooldowns = new HashMap<>();
@@ -33,6 +34,12 @@ public class magicCerebrum implements Listener {
     private final Map<UUID, Long> travalCooldowns = new HashMap<>();
     private final Map<UUID, Long> uravniumCooldowns = new HashMap<>();
     private final Map<UUID, Long> polectumCooldowns = new HashMap<>();
+    private final Map<UUID, Long> zashitnumCooldowns = new HashMap<>();
+    private final Map<UUID, Long> regenioCooldowns = new HashMap<>();
+    private final Map<UUID, Long> utopiticumCooldowns = new HashMap<>();
+    private final Map<UUID, Long> kastremCooldowns = new HashMap<>();
+    private final Map<UUID, Long> sumasvodCooldowns = new HashMap<>();
+    private final Map<UUID, Long> nevidumsCooldowns = new HashMap<>();
 
     public magicCerebrum(DamsotPlugin plugin) {
         this.plugin = plugin;
@@ -43,18 +50,27 @@ public class magicCerebrum implements Listener {
         Player player = event.getPlayer();
         String message = event.getMessage();
 
-        
         if (player.getInventory().getItemInMainHand().getType() == Material.BOOK) {
             ItemMeta meta = player.getInventory().getItemInMainHand().getItemMeta();
 
             if (meta != null && meta.hasDisplayName() && meta.getDisplayName().equals("§2Книга заклятий")) {
-                
+
                 if (meta.hasLore()) {
-                    List<String> lore = meta.getLore(); 
+                    List<String> lore = meta.getLore();
 
                     UUID playerId = player.getUniqueId();
 
-            
+                    if (lore.contains("§fАтакующее заклинание I") || lore.contains("§fАтакующее заклинание II")) {
+                        switch (message.toLowerCase()) {
+                            case "слептио":
+                                handleSleptioSpell(player);
+                                break;
+                            case "крик":
+                                handleKrikSpell(player);
+                                break;
+                        }
+                    }
+
                     if (lore.contains("§fАтакующее заклинание II")) {
                         switch (message.toLowerCase()) {
                             case "джастис":
@@ -69,7 +85,17 @@ public class magicCerebrum implements Listener {
                         }
                     }
 
-                    
+                    if (lore.contains("§fАтакующее заклинание III")) {
+                        switch (message.toLowerCase()) {
+                            case "кастрем":
+                                handleKastremSpell(player);
+                                break;
+                            case "сумасвод": 
+                                handleSumasvodSpell(player);
+                                break;
+                        }
+                    }
+
                     if (lore.contains("§fЗащитное заклинание I")) {
                         switch (message.toLowerCase()) {
                             case "травл":
@@ -77,8 +103,6 @@ public class magicCerebrum implements Listener {
                                 break;
                         }
                     }
-
-                    
                     if (lore.contains("§fЗащитное заклинание II")) {
                         switch (message.toLowerCase()) {
                             case "уравниум":
@@ -87,17 +111,22 @@ public class magicCerebrum implements Listener {
                             case "полектум":
                                 handlePolectumSpell(player);
                                 break;
+                            case "защитнум":
+                                handleZashitnumSpell(player);
+                                break;
+                            case "регенио":
+                                handleRegenioSpell(player);
+                                break;
                         }
                     }
 
-                    
-                    if (lore.contains("§fАтакующее заклинание I") || lore.contains("§fАтакующее заклинание II")) {
+                    if (lore.contains("§fЗащитное заклинание III")) {
                         switch (message.toLowerCase()) {
-                            case "слептио":
-                                handleSleptioSpell(player);
+                            case "утоптикум":
+                                handleUtopiticumSpell(player);
                                 break;
-                            case "крик":
-                                handleKrikSpell(player);
+                            case "невидумс":
+                                handleNevidumsSpell(player);
                                 break;
                         }
                     }
@@ -106,18 +135,17 @@ public class magicCerebrum implements Listener {
         }
     }
 
-    
     private boolean isOnCooldown(UUID playerId, Map<UUID, Long> cooldownMap, int cooldownSeconds) {
         long currentTime = System.currentTimeMillis();
         if (cooldownMap.containsKey(playerId)) {
             long cooldownEnd = cooldownMap.get(playerId);
             if (currentTime < cooldownEnd) {
-                return true; 
+                return true;
             }
         }
-        
+
         cooldownMap.put(playerId, currentTime + (cooldownSeconds * 1000L));
-        return false; 
+        return false;
     }
 
     private String formatCooldownTime(long cooldownEnd) {
@@ -127,7 +155,6 @@ public class magicCerebrum implements Listener {
         return String.format("%d:%02d", minutes, seconds);
     }
 
-    
     private void handleSleptioSpell(Player player) {
         UUID playerId = player.getUniqueId();
 
@@ -149,7 +176,6 @@ public class magicCerebrum implements Listener {
         }.runTask(plugin);
     }
 
-
     private void handleKrikSpell(Player player) {
         UUID playerId = player.getUniqueId();
 
@@ -161,20 +187,20 @@ public class magicCerebrum implements Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
-                
+
                 player.getWorld().spawnParticle(
-                        org.bukkit.Particle.BLOCK_CRACK, 
-                        player.getLocation(), 
-                        10000, 
-                        5, 5, 5, 
-                        0.1, 
+                        org.bukkit.Particle.BLOCK_CRACK,
+                        player.getLocation(),
+                        10000,
+                        5, 5, 5,
+                        0.1,
                         org.bukkit.Material.MYCELIUM.createBlockData(),
                         true
                 );
 
                 for (Entity entity : player.getNearbyEntities(5, 5, 5)) {
                     if (entity instanceof LivingEntity) {
-                        ((LivingEntity) entity).addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 100, 1)); 
+                        ((LivingEntity) entity).addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 100, 1));
                     }
                 }
                 player.sendMessage("§6Все существа в радиусе получили урон!");
@@ -182,7 +208,6 @@ public class magicCerebrum implements Listener {
         }.runTask(plugin);
     }
 
-   
     private void handleJusticeSpell(Player player) {
         UUID playerId = player.getUniqueId();
 
@@ -194,22 +219,20 @@ public class magicCerebrum implements Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
-                
+
                 double newHealth = player.getHealth() - 4;
                 if (newHealth > 0) {
                     player.setHealth(newHealth);
                 } else {
-                    player.setHealth(0); 
+                    player.setHealth(0);
                 }
 
-                
-                player.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 160, 9)); 
+                player.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 160, 9));
                 player.sendMessage("§6Вы получили силу Джастиса!");
             }
         }.runTask(plugin);
     }
 
-    
     private void handleProsvecticoSpell(Player player) {
         UUID playerId = player.getUniqueId();
 
@@ -231,7 +254,6 @@ public class magicCerebrum implements Listener {
         }.runTask(plugin);
     }
 
-    
     private void handleReaktimSpell(Player player) {
         UUID playerId = player.getUniqueId();
 
@@ -249,7 +271,6 @@ public class magicCerebrum implements Listener {
         }.runTask(plugin);
     }
 
-
     private void handleTravalSpell(Player player) {
         UUID playerId = player.getUniqueId();
 
@@ -263,7 +284,7 @@ public class magicCerebrum implements Listener {
             public void run() {
                 for (Entity entity : player.getNearbyEntities(4, 4, 4)) {
                     if (entity instanceof LivingEntity && entity != player) {
-                        
+
                         entity.setVelocity(entity.getLocation().subtract(player.getLocation()).toVector().normalize().multiply(1.5));
                     }
                 }
@@ -275,7 +296,7 @@ public class magicCerebrum implements Listener {
     private void handleUravniumSpell(Player player) {
         UUID playerId = player.getUniqueId();
 
-        if (isOnCooldown(playerId, uravniumCooldowns, 120)) { 
+        if (isOnCooldown(playerId, uravniumCooldowns, 120)) {
             player.sendMessage("§cЗаклятие Уравниум ещё восстанавливается! Осталось: " + formatCooldownTime(uravniumCooldowns.get(playerId)));
             return;
         }
@@ -283,16 +304,16 @@ public class magicCerebrum implements Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
-                
+
                 Player target = findNearestPlayer(player);
                 if (target != null) {
-                    
+
                     if (target.getInventory().getItemInMainHand() != null) {
                         target.getInventory().setItemInMainHand(null);
                     }
-                    
-                    target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 2400, 1)); 
-                    player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 2400, 1)); 
+
+                    target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 2400, 1));
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 2400, 1));
                     player.sendMessage("§6Заклятие Уравниум использовано на " + target.getName() + "!");
                     target.sendMessage("§6На вас наложено заклятие Уравниум!");
                 } else {
@@ -319,32 +340,213 @@ public class magicCerebrum implements Listener {
 
     private void handlePolectumSpell(Player player) {
         UUID playerId = player.getUniqueId();
-    
-        if (isOnCooldown(playerId, polectumCooldowns, 1200)) { 
+
+        if (isOnCooldown(playerId, polectumCooldowns, 1200)) {
             player.sendMessage("§cЗаклятие Полектум ещё восстанавливается! Осталось: " + formatCooldownTime(polectumCooldowns.get(playerId)));
             return;
         }
-    
+
         new BukkitRunnable() {
             @Override
             public void run() {
                 ItemStack bow = new ItemStack(Material.BOW);
                 ItemMeta bowMeta = bow.getItemMeta();
-                bowMeta.addEnchant(Enchantment.ARROW_KNOCKBACK, 5, true);
+                bowMeta.addEnchant(Enchantment.ARROW_KNOCKBACK, 10, true);
+                bowMeta.setUnbreakable(true); 
+                bowMeta.setDisplayName("§6Зачарованный лук"); 
                 bow.setItemMeta(bowMeta);
-                player.getInventory().addItem(bow);
-    
+
                 
+                ItemStack arrows = new ItemStack(Material.ARROW, 10); 
+                player.getInventory().addItem(bow);
+                player.getInventory().addItem(arrows);
+
+                
+                Bukkit.getPluginManager().registerEvents(new Listener() {
+                    @EventHandler
+                    public void onPlayerDropItem(PlayerDropItemEvent event) {
+                        if (event.getPlayer().equals(player) && event.getItemDrop().getItemStack().isSimilar(bow)) {
+                            event.setCancelled(true); 
+                        }
+                    }
+                }, plugin);
+
                 new BukkitRunnable() {
                     @Override
                     public void run() {
                         player.getInventory().removeItem(bow);
+                        player.getInventory().removeItem(new ItemStack(Material.ARROW, 10)); 
                         player.sendMessage("§6Твой лук пропал воооооу");
                     }
-                }.runTaskLater(plugin, 200); 
-    
+                }.runTaskLater(plugin, 200);
+
                 player.sendMessage("§6Заклятие Полектум использовано! Вы получили лук!");
             }
         }.runTask(plugin);
     }
+
+    @EventHandler
+    public void onPlayerDropItem(PlayerDropItemEvent event) {
+        Player player = event.getPlayer();
+        ItemStack droppedItem = event.getItemDrop().getItemStack();
+
+        
+        if (droppedItem.getType() == Material.BOW && droppedItem.getItemMeta() != null && "§6Лук Полектум".equals(droppedItem.getItemMeta().getDisplayName())) {
+            player.sendMessage("§cТы не можешь выбросить Лук Полектум!");
+            event.setCancelled(true); 
+        }
+    }
+
+    private void handleZashitnumSpell(Player player) {
+        UUID playerId = player.getUniqueId();
+
+        if (isOnCooldown(playerId, zashitnumCooldowns, 240)) { 
+            player.sendMessage("§cЗаклятие Защитнум ещё восстанавливается! Осталось: " + formatCooldownTime(zashitnumCooldowns.get(playerId)));
+            return;
+        }
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Entity entity : player.getNearbyEntities(1, 1, 1)) {
+                    if (entity instanceof Player) {
+                        LivingEntity target = (LivingEntity) entity;
+                        target.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 700, 2)); 
+                        player.sendMessage("§6На " + target.getName() + " наложено заклятие Защитнум!");
+                    }
+                }
+            }
+        }.runTask(plugin);
+    }
+
+    private void handleRegenioSpell(Player player) {
+        UUID playerId = player.getUniqueId();
+
+        if (isOnCooldown(playerId, regenioCooldowns, 90)) { 
+            player.sendMessage("§cЗаклятие Регенио ещё восстанавливается! Осталось: " + formatCooldownTime(regenioCooldowns.get(playerId)));
+            return;
+        }
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 240, 1)); 
+                player.sendMessage("§6Вы получили регенерацию от заклятия Регенио!");
+            }
+        }.runTask(plugin);
+    }
+
+    private void handleUtopiticumSpell(Player player) {
+        UUID playerId = player.getUniqueId();
+
+        if (isOnCooldown(playerId, utopiticumCooldowns, 30)) {
+            player.sendMessage("§cЗаклятие Утоптикум ещё восстанавливается! Осталось: " + formatCooldownTime(utopiticumCooldowns.get(playerId)));
+            return;
+        }
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                List<LivingEntity> immobilizedEntities = new ArrayList<>();
+                for (Entity entity : player.getNearbyEntities(5, 5, 5)) {
+                    if (entity instanceof LivingEntity && entity != player) {
+                        ((LivingEntity) entity).addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 600, 10)); 
+                        immobilizedEntities.add((LivingEntity) entity);
+                    }
+                }
+
+                
+                player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 600, 4)); 
+                player.sendMessage("§6Все существа в радиусе обездвижены на 30 секунд!");
+
+                
+                if (!immobilizedEntities.isEmpty()) {
+                    StringBuilder message = new StringBuilder("§6Обездвижены: ");
+                    for (LivingEntity entity : immobilizedEntities) {
+                        message.append(entity.getName()).append(", ");
+                    }
+                    player.sendMessage(message.substring(0, message.length() - 2)); 
+                } else {
+                    player.sendMessage("§cНет существ для обездвиживания в радиусе.");
+                }
+            }
+        }.runTask(plugin);
+    }
+
+    private void handleKastremSpell(Player player) {
+        UUID playerId = player.getUniqueId();
+
+        if (isOnCooldown(playerId, kastremCooldowns, 600)) {
+            player.sendMessage("§cЗаклятие Кастрем ещё восстанавливается! Осталось: " + formatCooldownTime(kastremCooldowns.get(playerId)));
+            return;
+        }
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                
+                player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 600, 255, true, false)); // 10 секунд
+                player.sendMessage("§6Вы стали неуязвимым!");
+            }
+        }.runTask(plugin);
+    }
+
+    private void handleSumasvodSpell(Player player) {
+        UUID playerId = player.getUniqueId();
+    
+        if (isOnCooldown(playerId, sumasvodCooldowns, 600)) {
+            player.sendMessage("§cЗаклятие Сумасвод ещё восстанавливается! Осталось: " + formatCooldownTime(sumasvodCooldowns.get(playerId)));
+            return;
+        }
+    
+        Player targetPlayer = findNearestPlayer(player);
+        if (targetPlayer != null) {
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    double newHealth = targetPlayer.getHealth() - 12; 
+                    if (newHealth > 0) {
+                        targetPlayer.setHealth(newHealth);
+                    } else {
+                        targetPlayer.setHealth(0);
+                    }
+    
+                    targetPlayer.setFoodLevel(0);
+                    player.sendMessage("§6Вы использовали заклятие Сумасвод на " + targetPlayer.getName() + " и он потерял 6 сердец!");
+                    targetPlayer.sendMessage("§cНа вас использовали заклятие Сумасвод и вы потеряли 6 сердец!");
+                }
+            }.runTask(plugin);
+        } else {
+            player.sendMessage("§cНемає найближчого гравця для цільового закляття.");
+        }
+    }
+
+
+private void handleNevidumsSpell(Player player) {
+    UUID playerId = player.getUniqueId();
+
+    if (isOnCooldown(playerId, nevidumsCooldowns, 300)) { 
+        player.sendMessage("§cЗаклятие Невидумс ещё восстанавливается! Осталось: " + formatCooldownTime(nevidumsCooldowns.get(playerId)));
+        return;
+    }
+
+    new BukkitRunnable() {
+        @Override
+        public void run() {
+            
+            player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 6000, 0)); 
+
+            
+            double offsetX = (Math.random() * 60) - 30; 
+            double offsetZ = (Math.random() * 60) - 30; 
+            player.teleport(player.getLocation().add(offsetX, 0, offsetZ));
+
+            player.sendMessage("§6Вы стали невидимым на 5 минут и телепортировались!");
+        }
+    }.runTask(plugin);
+
+    
+    nevidumsCooldowns.put(playerId, System.currentTimeMillis() + (300 * 1000L));
+}
+    
 }
