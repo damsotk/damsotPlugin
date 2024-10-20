@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
@@ -41,6 +42,11 @@ public class magicCerebrum implements Listener {
     private final Map<UUID, Long> sumasvodCooldowns = new HashMap<>();
     private final Map<UUID, Long> nevidumsCooldowns = new HashMap<>();
     private final Map<UUID, Long> levetoCooldowns = new HashMap<>();
+    private final Map<UUID, Long> zazhivgomCooldowns = new HashMap<>();
+    private final Map<UUID, Long> svezhiumCooldowns = new HashMap<>();
+    private final Map<UUID, Long> oktaniumCooldowns = new HashMap<>();
+    private final Map<UUID, Long> reaktionCooldowns = new HashMap<>();
+    private final Map<UUID, Long> neodoleoCooldowns = new HashMap<>();
 
     public magicCerebrum(DamsotPlugin plugin) {
         this.plugin = plugin;
@@ -60,6 +66,36 @@ public class magicCerebrum implements Listener {
                     List<String> lore = meta.getLore();
 
                     UUID playerId = player.getUniqueId();
+
+                    if (lore.contains("§fПоддерживающие заклинание III")) {
+                        switch (message.toLowerCase()) {
+                            case "неодолео":
+                                handleNeodoleoSpell(player);
+                                break;
+                        }
+                    }
+
+                    if (lore.contains("§fПоддерживающие заклинание II")) {
+                        switch (message.toLowerCase()) {
+                            case "октаниум":
+                                handleOktaniumSpell(player);
+                                break;
+                            case "реактио":
+                                handleReaktioSpell(player);
+                                break;
+                        }
+                    }
+
+                    if (lore.contains("§fПоддерживающие заклинание I")) {
+                        switch (message.toLowerCase()) {
+                            case "заживгом":
+                                handleZazhivgomSpell(player);
+                                break;
+                            case "свежиум":
+                                handleSvezhiumSpell(player);
+                                break;
+                        }
+                    }
 
                     if (lore.contains("§fАтакующее заклинание I") || lore.contains("§fАтакующее заклинание II")) {
                         switch (message.toLowerCase()) {
@@ -159,6 +195,21 @@ public class magicCerebrum implements Listener {
         return String.format("%d:%02d", minutes, seconds);
     }
 
+    private Player findNearestPlayer(Player player) {
+        double closestDistance = Double.MAX_VALUE;
+        Player closestPlayer = null;
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            if (onlinePlayer != player) {
+                double distance = player.getLocation().distance(onlinePlayer.getLocation());
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestPlayer = onlinePlayer;
+                }
+            }
+        }
+        return closestPlayer;
+    }
+
     private void handleSleptioSpell(Player player) {
         UUID playerId = player.getUniqueId();
 
@@ -250,7 +301,7 @@ public class magicCerebrum implements Listener {
             public void run() {
                 for (Entity entity : player.getNearbyEntities(10, 10, 10)) {
                     if (entity instanceof LivingEntity) {
-                        ((LivingEntity) entity).addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 400, 0)); // 20 секунд
+                        ((LivingEntity) entity).addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 400, 0)); 
                     }
                 }
                 player.sendMessage("§6Все существа рядом теперь видны!");
@@ -325,21 +376,6 @@ public class magicCerebrum implements Listener {
                 }
             }
         }.runTask(plugin);
-    }
-
-    private Player findNearestPlayer(Player player) {
-        double closestDistance = Double.MAX_VALUE;
-        Player closestPlayer = null;
-        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-            if (onlinePlayer != player) {
-                double distance = player.getLocation().distance(onlinePlayer.getLocation());
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    closestPlayer = onlinePlayer;
-                }
-            }
-        }
-        return closestPlayer;
     }
 
     private void handlePolectumSpell(Player player) {
@@ -484,7 +520,7 @@ public class magicCerebrum implements Listener {
             @Override
             public void run() {
 
-                player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 600, 255, true, false)); // 10 секунд
+                player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 600, 255, true, false)); 
                 player.sendMessage("§6Вы стали неуязвимым!");
             }
         }.runTask(plugin);
@@ -547,12 +583,12 @@ public class magicCerebrum implements Listener {
 
     private void handleLevetoSpell(Player player) {
         UUID playerId = player.getUniqueId();
-    
+
         if (isOnCooldown(playerId, levetoCooldowns, 60)) {
             player.sendMessage("§cЗаклятие Левето ещё восстанавливается! Осталось: " + formatCooldownTime(levetoCooldowns.get(playerId)));
             return;
         }
-    
+
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -562,4 +598,155 @@ public class magicCerebrum implements Listener {
         }.runTask(plugin);
     }
 
+    private void handleZazhivgomSpell(Player player) {
+        UUID playerId = player.getUniqueId();
+
+        if (isOnCooldown(playerId, zazhivgomCooldowns, 90)) {
+            player.sendMessage("§cЗаклятие Заживгом ещё восстанавливается! Осталось: " + formatCooldownTime(zazhivgomCooldowns.get(playerId)));
+            return;
+        }
+        Player nearestPlayer = findNearestPlayer(player);
+        if (nearestPlayer == null) {
+            player.sendMessage("§cРядом нет игроков для исцеления!");
+            return;
+        }
+
+        double maxHealth = nearestPlayer.getMaxHealth();
+        double healAmount = maxHealth * 0.20;
+        double newHealth = Math.min(nearestPlayer.getHealth() + healAmount, maxHealth);
+        nearestPlayer.setHealth(newHealth);
+
+        nearestPlayer.sendMessage("§6Вас исцелил " + player + " на 20%!");
+        player.sendMessage("§6Вы исцелили ближайшего игрока!");
+
+        zazhivgomCooldowns.put(playerId, System.currentTimeMillis() + (90 * 1000L));
+    }
+
+    private void handleSvezhiumSpell(Player player) {
+        UUID playerId = player.getUniqueId();
+
+        if (isOnCooldown(playerId, svezhiumCooldowns, 300)) {
+            player.sendMessage("§cЗаклятие Свежиум ещё восстанавливается! Осталось: " + formatCooldownTime(svezhiumCooldowns.get(playerId)));
+            return;
+        }
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Entity entity : player.getNearbyEntities(2, 2, 2)) {
+                    if (entity instanceof Player) {
+                        Player nearbyPlayer = (Player) entity;
+                        nearbyPlayer.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 60, 0));
+                    }
+                }
+                player.sendMessage("§6Эффект насыщения вокруг активирован!");
+            }
+        }.runTask(plugin);
+
+        svezhiumCooldowns.put(playerId, System.currentTimeMillis() + (300 * 1000L));
+    }
+
+    private void handleOktaniumSpell(Player player) {
+        UUID playerId = player.getUniqueId();
+
+        if (isOnCooldown(playerId, oktaniumCooldowns, 10 * 60)) {
+            player.sendMessage("§cЗаклятие Октаниум ещё восстанавливается! Осталось: " + formatCooldownTime(oktaniumCooldowns.get(playerId)));
+            return;
+        }
+
+        Player nearestPlayer = findNearestPlayer(player);
+
+        if (nearestPlayer == null || player.getLocation().distance(nearestPlayer.getLocation()) > 10) {
+            player.sendMessage("§cРядом нет игроков, заклятие не может быть активировано!");
+            return;
+        }
+
+        nearestPlayer.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 3 * 60 * 20, 0));
+        nearestPlayer.sendMessage("§6Вы получили насыщение на 3 минуты!");
+
+        player.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, 2 * 60 * 20, 0));
+        player.sendMessage("§6Вам накладывается эффект ночного зрения на 2 минуты!");
+
+        oktaniumCooldowns.put(playerId, System.currentTimeMillis());
+    }
+
+    private void handleReaktioSpell(Player player) {
+        UUID playerId = player.getUniqueId();
+
+        if (isOnCooldown(playerId, reaktionCooldowns, 10 * 60)) {
+            player.sendMessage("§cЗаклятие Реактио ещё восстанавливается! Осталось: " + formatCooldownTime(reaktionCooldowns.get(playerId)));
+            return;
+        }
+
+        Player nearestPlayer = findNearestPlayer(player);
+
+        if (nearestPlayer == null || player.getLocation().distance(nearestPlayer.getLocation()) > 3) {
+            player.sendMessage("§cРядом нет игроков, заклятие не может быть активировано!");
+            return;
+        }
+
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            if (onlinePlayer != player && player.getLocation().distance(onlinePlayer.getLocation()) <= 3) {
+                onlinePlayer.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 20 * 20, 2));
+                onlinePlayer.sendMessage("§6Вы получили эффект скорости на 20 секунд!");
+            }
+        }
+
+        player.sendMessage("§6Вы активировали заклятие Реактио, ближайшие игроки получили скорость!");
+
+        reaktionCooldowns.put(playerId, System.currentTimeMillis());
+    }
+
+    private void handleNeodoleoSpell(Player player) {
+        UUID playerId = player.getUniqueId();
+    
+        if (isOnCooldown(playerId, neodoleoCooldowns, 10 * 60)) {
+            player.sendMessage("§cЗаклятие Неодолео ещё восстанавливается! Осталось: " + formatCooldownTime(neodoleoCooldowns.get(playerId)));
+            return;
+        }
+    
+        List<Player> nearbyPlayers = new ArrayList<>();
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            if (onlinePlayer != player && player.getLocation().distance(onlinePlayer.getLocation()) <= 3) {
+                nearbyPlayers.add(onlinePlayer);
+            }
+        }
+    
+        if (nearbyPlayers.isEmpty()) {
+            nearbyPlayers.add(player);
+        }
+    
+
+        Bukkit.getScheduler().runTask(plugin, () -> {
+
+            Map<Player, Location> playerLocations = new HashMap<>();
+    
+            for (Player onlinePlayer : nearbyPlayers) {
+                playerLocations.put(onlinePlayer, onlinePlayer.getLocation());
+                onlinePlayer.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 20 * 20, 2));
+                onlinePlayer.sendMessage("§6Вы получили эффект слабости 3 на 20 секунд!");
+            }
+    
+            for (Player onlinePlayer : nearbyPlayers) {
+                onlinePlayer.teleport(new Location(player.getWorld(), 1179, 170, -564));
+                onlinePlayer.sendMessage("§6Вы были телепортированы на координаты 1179, 170, -564!");
+            }
+    
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                for (Player onlinePlayer : nearbyPlayers) {
+                    Location originalLocation = playerLocations.get(onlinePlayer);
+                    if (originalLocation != null) {
+                        onlinePlayer.teleport(originalLocation);
+                        onlinePlayer.sendMessage("§6Вы были телепортированы обратно.");
+                    }
+                }
+            }, 5 * 20);
+        });
+    
+        player.sendMessage("§6Вы активировали заклятие Неодолео, ближайшие игроки получили слабость и были телепортированы!");
+    
+        neodoleoCooldowns.put(playerId, System.currentTimeMillis());
+    }
+    
+    
 }

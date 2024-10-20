@@ -17,20 +17,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
-import com.sk89q.worldedit.bukkit.BukkitAdapter;
-import com.sk89q.worldedit.extent.clipboard.Clipboard;
-import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats;
-import com.sk89q.worldedit.session.ClipboardHolder;
-import com.sk89q.worldedit.world.World;
-import com.sk89q.worldedit.world.block.BlockTypes;
-import com.sk89q.worldedit.math.BlockVector3;
-import com.sk89q.worldedit.EditSession;
-import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormat;
-import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
-import com.sk89q.worldedit.world.block.BlockState;
-import com.sk89q.worldedit.bukkit.BukkitWorld;
-import com.sk89q.worldedit.session.EditSession;
-
 
 public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listener {
 
@@ -87,31 +73,14 @@ public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listene
 
     
     public void createRift(Location location) {
-        World world = BukkitAdapter.adapt(location.getWorld());
-
-        File schematicFile = new File(getDataFolder(), "Void.schematic");
-        ClipboardFormat format = ClipboardFormats.findByFile(schematicFile);
-
-        if (format != null) {
-            try (ClipboardReader reader = format.getReader(new FileInputStream(schematicFile))) {
-                Clipboard clipboard = reader.read();
-
-                try (EditSession editSession = com.sk89q.worldedit.WorldEdit.getInstance().newEditSession(world)) {
-                    ClipboardHolder holder = new ClipboardHolder(clipboard);
-                    BlockVector3 pasteLocation = BlockVector3.at(location.getBlockX(), location.getBlockY(), location.getBlockZ());
-
-                    holder.createPaste(editSession)
-                        .to(pasteLocation)
-                        .ignoreAirBlocks(true)
-                        .build();
-                }
-
-                getLogger().info("Схематик успешно загружен и спавнен!");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } else {
-            getLogger().warning("Формат схематика не найден или файл поврежден.");
+        World world = location.getWorld();
+        if (world != null) {
+            
+            world.getBlockAt(location.clone().add(0, 0, 0)).setType(Material.RED_WOOL);
+            world.getBlockAt(location.clone().add(1, 0, 0)).setType(Material.RED_WOOL);
+            world.getBlockAt(location.clone().add(-1, 0, 0)).setType(Material.RED_WOOL);
+            world.getBlockAt(location.clone().add(0, 0, 1)).setType(Material.RED_WOOL);
+            world.getBlockAt(location.clone().add(0, 0, -1)).setType(Material.RED_WOOL);
         }
     }
 
