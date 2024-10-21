@@ -552,7 +552,7 @@ public class magicCerebrum implements Listener {
                 }
             }.runTask(plugin);
         } else {
-            player.sendMessage("§cНемає найближчого гравця для цільового закляття.");
+            player.sendMessage("§cНету ближайшего игрока для использования.");
         }
     }
 
