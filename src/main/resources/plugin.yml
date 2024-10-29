@@ -5,3 +5,9 @@ api-version: 1.20
 commands:
   spawnRazlom:
     description: Спавнить розлом на рандомних координатах
+  fracadd:
+    description: Додати гравця до фракції
+    usage: /fracadd <nickname> <name_fraction>
+  fracmenu:
+    description: Відкрити меню фракції
+    usage: /fracmenu

@@ -1,5 +1,9 @@
 package com.damsotplugin;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 import org.bukkit.Bukkit;
@@ -9,22 +13,60 @@ import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listener {
 
+    private final Map<String, String> playerFactions = new HashMap<>();
+    private File factionsFile;
+    private FileConfiguration factionsConfig;
+
     @Override
     public void onEnable() {
+        factionsFile = new File(getDataFolder(), "factions.yml");
+        if (!factionsFile.exists()) {
+            saveResource("factions.yml", false);
+        }
+        factionsConfig = YamlConfiguration.loadConfiguration(factionsFile);
+
+        loadPlayerFactions();
+        getServer().getPluginManager().registerEvents(new MenuListener(), this);
+        getCommand("fracadd").setExecutor(new FactionCommand(this, playerFactions));
+        getCommand("fracmenu").setExecutor(new FactionCommand(this, playerFactions));
+
         getCommand("spawnRazlom").setExecutor(this);
         Bukkit.getPluginManager().registerEvents(this, this);
-        getLogger().info("RiftPlugin включен!");
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("RiftPlugin вимкнено!");
+        savePlayerFactions();
+    }
+
+    public void loadPlayerFactions() {
+        for (String key : factionsConfig.getKeys(false)) {
+            playerFactions.put(key, factionsConfig.getString(key));
+        }
+    }
+
+    public void savePlayerFactions() {
+        for (Map.Entry<String, String> entry : playerFactions.entrySet()) {
+            factionsConfig.set(entry.getKey(), entry.getValue());
+        }
+        try {
+            factionsConfig.save(factionsFile);
+        } catch (IOException e) {
+            getLogger().severe("Не вдалося зберегти фракції у файл!");
+            e.printStackTrace();
+        }
+    }
+
+    public Map<String, String> getPlayerFactions() {
+        return playerFactions;
     }
 
     @Override
@@ -87,7 +129,7 @@ public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listene
             public void run() {
                 spawnCustomMob(riftLocation, 10);
             }
-        }.runTaskLater(this, 5 * 60 * 20); 
+        }.runTaskLater(this, 5 * 60 * 20);
 
         new BukkitRunnable() {
             @Override
@@ -98,6 +140,6 @@ public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listene
                         + riftLocation.getBlockZ() + " стабилизировался";
                 Bukkit.broadcastMessage(stabilizationMessage);
             }
-        }.runTaskLater(this, 10 * 60 * 20); 
+        }.runTaskLater(this, 10 * 60 * 20);
     }
 }
