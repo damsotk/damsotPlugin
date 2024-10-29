@@ -32,6 +32,8 @@ public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listene
             saveResource("factions.yml", false);
         }
         factionsConfig = YamlConfiguration.loadConfiguration(factionsFile);
+        getServer().getPluginManager().registerEvents(new BonusCaptureListener(this), this);
+
 
         loadPlayerFactions();
         getServer().getPluginManager().registerEvents(new MenuListener(), this);
