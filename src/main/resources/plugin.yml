@@ -11,3 +11,6 @@ commands:
   fracmenu:
     description: Відкрити меню фракції
     usage: /fracmenu
+  viewteam:
+    description: Увидеть всех тиммейтов
+    usage: /viewteam

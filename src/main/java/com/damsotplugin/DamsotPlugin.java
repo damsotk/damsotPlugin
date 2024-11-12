@@ -11,6 +11,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listener {
     private RiftManager riftManager;
     private FactionManager factionManager;
+    private TeamManager teamManager;
 
     @Override
     public void onEnable() {
@@ -22,6 +23,9 @@ public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listene
         factionManager = new FactionManager(this);
         getCommand("fracmenu").setExecutor(factionManager);
         getCommand("fracadd").setExecutor(factionManager);
+
+        teamManager = new TeamManager(this);
+        getCommand("viewteam").setExecutor(teamManager);
     
     }
 
