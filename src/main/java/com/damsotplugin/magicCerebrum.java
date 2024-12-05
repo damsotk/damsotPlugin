@@ -1,22 +1,30 @@
 package com.damsotplugin;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
@@ -48,8 +56,83 @@ public class magicCerebrum implements Listener {
     private final Map<UUID, Long> reaktionCooldowns = new HashMap<>();
     private final Map<UUID, Long> neodoleoCooldowns = new HashMap<>();
 
+    private final Map<String, Set<String>> learnedSpells = new HashMap<>(); 
+    private final File dataFile;
+
     public magicCerebrum(DamsotPlugin plugin) {
         this.plugin = plugin;
+        this.dataFile = new File(plugin.getDataFolder(), "learned_spells.yml");
+        loadLearnedSpells();
+    }
+
+
+    @EventHandler
+    public void onPlayerRightClick(PlayerInteractEvent event) {
+        if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            Player player = event.getPlayer();
+            ItemStack item = player.getInventory().getItemInMainHand();
+    
+        
+            if (item.getType() == Material.ENCHANTED_BOOK && item.hasItemMeta()) {
+                ItemMeta meta = item.getItemMeta();
+    
+                if (meta.hasDisplayName()) {
+                    String spellName = extractSpellName(meta.getDisplayName());
+    
+                    if (!spellName.isEmpty()) {
+                        learnSpell(player, spellName);
+                    } else {
+                        player.sendMessage("§cЭто не заклинание для изучения.");
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean isSpellLearned(Player player, String spellName) {
+        String playerName = player.getName(); 
+        return learnedSpells.containsKey(playerName) && learnedSpells.get(playerName).contains(spellName);
+    }
+
+    private void saveLearnedSpells() {
+        FileConfiguration config = new YamlConfiguration();
+        for (Map.Entry<String, Set<String>> entry : learnedSpells.entrySet()) {
+            config.set(entry.getKey(), new ArrayList<>(entry.getValue()));
+        }
+        try {
+            config.save(dataFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadLearnedSpells() {
+        if (!dataFile.exists()) return;
+        FileConfiguration config = YamlConfiguration.loadConfiguration(dataFile);
+        for (String playerName : config.getKeys(false)) {
+            List<String> spells = config.getStringList(playerName);
+            learnedSpells.put(playerName, new HashSet<>(spells)); 
+        }
+    }
+
+    private String extractSpellName(String displayName) {
+        if (displayName.startsWith("§8")) {  
+            return displayName.substring(2).trim();  
+        }
+        return "";  
+    }
+
+    private void learnSpell(Player player, String spellName) {
+        String playerName = player.getName();
+    
+        if (learnedSpells.computeIfAbsent(playerName, k -> new HashSet<>()).contains(spellName)) {
+            player.sendMessage("§6Вы уже изучили это заклинание!");
+            return;
+        }
+    
+        learnedSpells.get(playerName).add(spellName);
+        player.sendMessage("§aВы изучили заклинание: " + spellName);
+        saveLearnedSpells();
     }
 
     @EventHandler
