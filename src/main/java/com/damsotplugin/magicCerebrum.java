@@ -56,7 +56,7 @@ public class magicCerebrum implements Listener {
     private final Map<UUID, Long> reaktionCooldowns = new HashMap<>();
     private final Map<UUID, Long> neodoleoCooldowns = new HashMap<>();
 
-    private final Map<String, Set<String>> learnedSpells = new HashMap<>(); 
+    private final Map<String, Set<String>> learnedSpells = new HashMap<>();
     private final File dataFile;
 
     public magicCerebrum(DamsotPlugin plugin) {
@@ -65,20 +65,18 @@ public class magicCerebrum implements Listener {
         loadLearnedSpells();
     }
 
-
     @EventHandler
     public void onPlayerRightClick(PlayerInteractEvent event) {
         if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
             Player player = event.getPlayer();
             ItemStack item = player.getInventory().getItemInMainHand();
-    
-        
+
             if (item.getType() == Material.ENCHANTED_BOOK && item.hasItemMeta()) {
                 ItemMeta meta = item.getItemMeta();
-    
+
                 if (meta.hasDisplayName()) {
                     String spellName = extractSpellName(meta.getDisplayName());
-    
+
                     if (!spellName.isEmpty()) {
                         learnSpell(player, spellName);
                     } else {
@@ -91,7 +89,40 @@ public class magicCerebrum implements Listener {
 
     private boolean isSpellLearned(Player player, String spellName) {
         String playerName = player.getName(); 
-        return learnedSpells.containsKey(playerName) && learnedSpells.get(playerName).contains(spellName);
+        String normalizedSpellName = spellName.trim().toLowerCase();
+        
+        
+        System.out.println("Игрок: " + playerName + " пытается использовать заклинание: " + spellName);
+        System.out.println("Заклинание в нижнем регистре и без пробелов: " + normalizedSpellName);
+    
+        
+        
+        if (learnedSpells.containsKey(playerName)) {
+            System.out.println("Изученные заклинания игрока " + playerName + ": " + learnedSpells.get(playerName));
+        } else {
+            System.out.println("У игрока " + playerName + " нет изученных заклинаний.");
+        }
+    
+        
+        Set<String> learnedSpellsSet = learnedSpells.get(playerName);
+        if (learnedSpellsSet != null) {
+           
+            Set<String> normalizedLearnedSpells = new HashSet<>();
+            for (String spell : learnedSpellsSet) {
+                normalizedLearnedSpells.add(spell.trim().toLowerCase());
+            }
+    
+            
+            System.out.println("Нормализованные изученные заклинания: " + normalizedLearnedSpells);
+            
+            
+            boolean isLearned = normalizedLearnedSpells.contains(normalizedSpellName);
+            System.out.println("Заклинание " + normalizedSpellName + " изучено: " + isLearned);
+            return isLearned;
+        }
+    
+        
+        return false;
     }
 
     private void saveLearnedSpells() {
@@ -107,29 +138,31 @@ public class magicCerebrum implements Listener {
     }
 
     private void loadLearnedSpells() {
-        if (!dataFile.exists()) return;
+        if (!dataFile.exists()) {
+            return;
+        }
         FileConfiguration config = YamlConfiguration.loadConfiguration(dataFile);
         for (String playerName : config.getKeys(false)) {
             List<String> spells = config.getStringList(playerName);
-            learnedSpells.put(playerName, new HashSet<>(spells)); 
+            learnedSpells.put(playerName, new HashSet<>(spells));
         }
     }
 
     private String extractSpellName(String displayName) {
-        if (displayName.startsWith("§8")) {  
-            return displayName.substring(2).trim();  
+        if (displayName.startsWith("§8")) {
+            return displayName.substring(2).trim();
         }
-        return "";  
+        return "";
     }
 
     private void learnSpell(Player player, String spellName) {
         String playerName = player.getName();
-    
+
         if (learnedSpells.computeIfAbsent(playerName, k -> new HashSet<>()).contains(spellName)) {
             player.sendMessage("§6Вы уже изучили это заклинание!");
             return;
         }
-    
+
         learnedSpells.get(playerName).add(spellName);
         player.sendMessage("§aВы изучили заклинание: " + spellName);
         saveLearnedSpells();
@@ -138,121 +171,90 @@ public class magicCerebrum implements Listener {
     @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
-        String message = event.getMessage();
-
-        if (player.getInventory().getItemInMainHand().getType() == Material.BOOK) {
-            ItemMeta meta = player.getInventory().getItemInMainHand().getItemMeta();
-
-            if (meta != null && meta.hasDisplayName() && meta.getDisplayName().equals("§2Книга заклятий")) {
-
-                if (meta.hasLore()) {
-                    List<String> lore = meta.getLore();
-
-                    UUID playerId = player.getUniqueId();
-
-                    if (lore.contains("§fПоддерживающие заклинание III")) {
-                        switch (message.toLowerCase()) {
-                            case "неодолео":
-                                handleNeodoleoSpell(player);
-                                break;
-                        }
+        String message = event.getMessage().toLowerCase();  
+    
+        ItemStack item = player.getInventory().getItemInMainHand();
+    
+        
+        if (item.getType() == Material.PAPER && item.hasItemMeta()) {
+            ItemMeta meta = item.getItemMeta();
+    
+            if (meta != null && meta.hasDisplayName() && meta.getDisplayName().equals("§6Книга заклинаний")) {
+                
+                Set<String> learnedSpellsSet = learnedSpells.get(player.getName());  
+                System.out.println("Игрок " + player.getName() + " пытается использовать заклинание: " + message);
+                System.out.println("Изученные заклинания игрока: " + (learnedSpellsSet != null ? learnedSpellsSet.toString() : "Нет изученных заклинаний"));
+    
+                // Проверяем, изучено ли заклинание
+                if (isSpellLearned(player, message)) {
+                    // Вызов соответствующего метода заклинания
+                    switch (message) {
+                        case "неодолео":
+                            handleNeodoleoSpell(player);
+                            break;
+                        case "октаниум":
+                            handleOktaniumSpell(player);
+                            break;
+                        case "реактио":
+                            handleReaktioSpell(player);
+                            break;
+                        case "заживгом":
+                            handleZazhivgomSpell(player);
+                            break;
+                        case "свежиум":
+                            handleSvezhiumSpell(player);
+                            break;
+                        case "слептио":
+                            handleSleptioSpell(player);
+                            break;
+                        case "крик":
+                            handleKrikSpell(player);
+                            break;
+                        case "джастис":
+                            handleJusticeSpell(player);
+                            break;
+                        case "просвектико":
+                            handleProsvecticoSpell(player);
+                            break;
+                        case "реактим":
+                            handleReaktimSpell(player);
+                            break;
+                        case "кастрем":
+                            handleKastremSpell(player);
+                            break;
+                        case "сумасвод":
+                            handleSumasvodSpell(player);
+                            break;
+                        case "травл":
+                            handleTravalSpell(player);
+                            break;
+                        case "левето":
+                            handleLevetoSpell(player);
+                            break;
+                        case "уравниум":
+                            handleUravniumSpell(player);
+                            break;
+                        case "полектум":
+                            handlePolectumSpell(player);
+                            break;
+                        case "защитнум":
+                            handleZashitnumSpell(player);
+                            break;
+                        case "регенио":
+                            handleRegenioSpell(player);
+                            break;
+                        case "утоптикум":
+                            handleUtopiticumSpell(player);
+                            break;
+                        case "невидумс":
+                            handleNevidumsSpell(player);
+                            break;
+                        default:
+                            player.sendMessage("§cВы не знаете такого заклинания!");
+                            break;
                     }
-
-                    if (lore.contains("§fПоддерживающие заклинание II")) {
-                        switch (message.toLowerCase()) {
-                            case "октаниум":
-                                handleOktaniumSpell(player);
-                                break;
-                            case "реактио":
-                                handleReaktioSpell(player);
-                                break;
-                        }
-                    }
-
-                    if (lore.contains("§fПоддерживающие заклинание I")) {
-                        switch (message.toLowerCase()) {
-                            case "заживгом":
-                                handleZazhivgomSpell(player);
-                                break;
-                            case "свежиум":
-                                handleSvezhiumSpell(player);
-                                break;
-                        }
-                    }
-
-                    if (lore.contains("§fАтакующее заклинание I") || lore.contains("§fАтакующее заклинание II")) {
-                        switch (message.toLowerCase()) {
-                            case "слептио":
-                                handleSleptioSpell(player);
-                                break;
-                            case "крик":
-                                handleKrikSpell(player);
-                                break;
-                        }
-                    }
-
-                    if (lore.contains("§fАтакующее заклинание II")) {
-                        switch (message.toLowerCase()) {
-                            case "джастис":
-                                handleJusticeSpell(player);
-                                break;
-                            case "просвектико":
-                                handleProsvecticoSpell(player);
-                                break;
-                            case "реактим":
-                                handleReaktimSpell(player);
-                                break;
-                        }
-                    }
-
-                    if (lore.contains("§fАтакующее заклинание III")) {
-                        switch (message.toLowerCase()) {
-                            case "кастрем":
-                                handleKastremSpell(player);
-                                break;
-                            case "сумасвод":
-                                handleSumasvodSpell(player);
-                                break;
-                        }
-                    }
-
-                    if (lore.contains("§fЗащитное заклинание I")) {
-                        switch (message.toLowerCase()) {
-                            case "травл":
-                                handleTravalSpell(player);
-                                break;
-                            case "левето":
-                                handleLevetoSpell(player);
-                                break;
-                        }
-                    }
-                    if (lore.contains("§fЗащитное заклинание II")) {
-                        switch (message.toLowerCase()) {
-                            case "уравниум":
-                                handleUravniumSpell(player);
-                                break;
-                            case "полектум":
-                                handlePolectumSpell(player);
-                                break;
-                            case "защитнум":
-                                handleZashitnumSpell(player);
-                                break;
-                            case "регенио":
-                                handleRegenioSpell(player);
-                                break;
-                        }
-                    }
-
-                    if (lore.contains("§fЗащитное заклинание III")) {
-                        switch (message.toLowerCase()) {
-                            case "утоптикум":
-                                handleUtopiticumSpell(player);
-                                break;
-                            case "невидумс":
-                                handleNevidumsSpell(player);
-                                break;
-                        }
-                    }
+                } else {
+                    player.sendMessage("§cВы ещё не изучили это заклинание.");
                 }
             }
         }
@@ -384,7 +386,7 @@ public class magicCerebrum implements Listener {
             public void run() {
                 for (Entity entity : player.getNearbyEntities(10, 10, 10)) {
                     if (entity instanceof LivingEntity) {
-                        ((LivingEntity) entity).addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 400, 0)); 
+                        ((LivingEntity) entity).addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 400, 0));
                     }
                 }
                 player.sendMessage("§6Все существа рядом теперь видны!");
@@ -603,7 +605,7 @@ public class magicCerebrum implements Listener {
             @Override
             public void run() {
 
-                player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 600, 255, true, false)); 
+                player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 600, 255, true, false));
                 player.sendMessage("§6Вы стали неуязвимым!");
             }
         }.runTask(plugin);
@@ -782,39 +784,38 @@ public class magicCerebrum implements Listener {
 
     private void handleNeodoleoSpell(Player player) {
         UUID playerId = player.getUniqueId();
-    
+
         if (isOnCooldown(playerId, neodoleoCooldowns, 10 * 60)) {
             player.sendMessage("§cЗаклятие Неодолео ещё восстанавливается! Осталось: " + formatCooldownTime(neodoleoCooldowns.get(playerId)));
             return;
         }
-    
+
         List<Player> nearbyPlayers = new ArrayList<>();
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             if (onlinePlayer != player && player.getLocation().distance(onlinePlayer.getLocation()) <= 3) {
                 nearbyPlayers.add(onlinePlayer);
             }
         }
-    
+
         if (nearbyPlayers.isEmpty()) {
             nearbyPlayers.add(player);
         }
-    
 
         Bukkit.getScheduler().runTask(plugin, () -> {
 
             Map<Player, Location> playerLocations = new HashMap<>();
-    
+
             for (Player onlinePlayer : nearbyPlayers) {
                 playerLocations.put(onlinePlayer, onlinePlayer.getLocation());
                 onlinePlayer.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 20 * 20, 2));
                 onlinePlayer.sendMessage("§6Вы получили эффект слабости 3 на 20 секунд!");
             }
-    
+
             for (Player onlinePlayer : nearbyPlayers) {
                 onlinePlayer.teleport(new Location(player.getWorld(), 1179, 170, -564));
                 onlinePlayer.sendMessage("§6Вы были телепортированы на координаты 1179, 170, -564!");
             }
-    
+
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 for (Player onlinePlayer : nearbyPlayers) {
                     Location originalLocation = playerLocations.get(onlinePlayer);
@@ -825,11 +826,10 @@ public class magicCerebrum implements Listener {
                 }
             }, 5 * 20);
         });
-    
+
         player.sendMessage("§6Вы активировали заклятие Неодолео, ближайшие игроки получили слабость и были телепортированы!");
-    
+
         neodoleoCooldowns.put(playerId, System.currentTimeMillis());
     }
-    
-    
+
 }
