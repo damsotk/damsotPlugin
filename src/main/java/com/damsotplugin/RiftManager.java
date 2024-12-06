@@ -1,5 +1,8 @@
 package com.damsotplugin;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Random;
 
 import org.bukkit.Bukkit;
@@ -7,9 +10,22 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import com.sk89q.worldedit.EditSession;
+import com.sk89q.worldedit.WorldEdit;
+import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.bukkit.BukkitAdapter;
+import com.sk89q.worldedit.extent.clipboard.Clipboard;
+import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats;
+import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
+import com.sk89q.worldedit.function.operation.Operations;
+import com.sk89q.worldedit.math.BlockVector3;
+import com.sk89q.worldedit.session.ClipboardHolder;
+
 public class RiftManager {
+
     private final DamsotPlugin plugin;
 
     public RiftManager(DamsotPlugin plugin) {
@@ -41,6 +57,41 @@ public class RiftManager {
         }
     }
 
+    public void spawnTestSchematic(Player player) {
+        File schematicFile = new File(plugin.getDataFolder(), "close_razlom1.schem");
+        if (!schematicFile.exists()) {
+            player.sendMessage("§cСхематик 'close_razlom1.schem' не знайдено!");
+            return;
+        }
+    
+        com.sk89q.worldedit.world.World world = BukkitAdapter.adapt(player.getWorld());
+        com.sk89q.worldedit.math.BlockVector3 playerLocation = BukkitAdapter.adapt(player.getLocation()).toVector().toBlockPoint();
+    
+        try (FileInputStream fis = new FileInputStream(schematicFile); ClipboardReader reader = ClipboardFormats.findByFile(schematicFile).getReader(fis)) {
+            Clipboard clipboard = reader.read();
+            try (EditSession editSession = WorldEdit.getInstance().newEditSession(world)) {
+                ClipboardHolder holder = new ClipboardHolder(clipboard);
+                BlockVector3 pasteLocation = playerLocation.add(1, 0, 1);
+                player.sendMessage("§aСхематик вставляється на координати: "
+                    + pasteLocation.getX() + ", "
+                    + pasteLocation.getY() + ", "
+                    + pasteLocation.getZ());
+    
+                Operations.complete(holder.createPaste(editSession)
+                        .to(pasteLocation)
+                        .ignoreAirBlocks(false)
+                        .build());
+                player.sendMessage("§aСхематик успішно завантажено!");
+            }
+        } catch (IOException e) {
+            player.sendMessage("§cПомилка читання файлу схематичного.");
+            e.printStackTrace();
+        } catch (WorldEditException e) {
+            player.sendMessage("§cПомилка вставки схематичного.");
+            e.printStackTrace();
+        }
+    }
+
     public void createRift(Location location) {
         World world = location.getWorld();
         if (world != null) {
@@ -54,7 +105,7 @@ public class RiftManager {
 
     public void spawnCustomMob(Location location, int amount) {
         String command = "mm mobs spawn Forester " + amount;
-        String commandWithLocation = command + " " +  location.getWorld().getName() + ","
+        String commandWithLocation = command + " " + location.getWorld().getName() + ","
                 + location.getBlockX() + ","
                 + (location.getBlockY() - 1) + ","
                 + location.getBlockZ();

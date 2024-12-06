@@ -17,6 +17,8 @@ public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listene
     public void onEnable() {
         riftManager = new RiftManager(this);
         getCommand("spawnRazlom").setExecutor(this);
+        getCommand("spawnRazlomTest").setExecutor(this);
+
         Bukkit.getPluginManager().registerEvents(new magicCerebrum(this), this);
         Bukkit.getPluginManager().registerEvents(this, this);
 
@@ -38,6 +40,10 @@ public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listene
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (command.getName().equalsIgnoreCase("spawnRazlom")) {
             riftManager.spawnRift(sender);
+            return true;
+        } else if (command.getName().equalsIgnoreCase("spawnRazlomTest") && sender instanceof Player) {
+            Player player = (Player) sender;
+            riftManager.spawnTestSchematic(player);
             return true;
         } else if (command.getName().equalsIgnoreCase("fracmenu") && sender instanceof Player) {
             Player player = (Player) sender;

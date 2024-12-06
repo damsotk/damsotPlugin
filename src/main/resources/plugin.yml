@@ -14,3 +14,7 @@ commands:
   viewteam:
     description: Увидеть всех тиммейтов
     usage: /viewteam
+  spawnRazlomTest:
+    description: спавн по схематике
+    usage: /spawnRazlomTest
+  
