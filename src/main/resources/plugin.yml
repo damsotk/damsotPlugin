@@ -4,7 +4,8 @@ main: com.damsotplugin.DamsotPlugin
 api-version: 1.20
 commands:
   spawnRazlom:
-    description: Спавнить розлом на рандомних координатах
+    description: Управление разломами.
+    usage: /spawnRazlom <RiftName> <open|close>
   fracadd:
     description: Додати гравця до фракції
     usage: /fracadd <nickname> <name_fraction>
@@ -14,7 +15,3 @@ commands:
   viewteam:
     description: Увидеть всех тиммейтов
     usage: /viewteam
-  spawnRazlomTest:
-    description: спавн по схематике
-    usage: /spawnRazlomTest
-  

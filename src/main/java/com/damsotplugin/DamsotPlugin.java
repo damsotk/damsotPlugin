@@ -17,7 +17,6 @@ public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listene
     public void onEnable() {
         riftManager = new RiftManager(this);
         getCommand("spawnRazlom").setExecutor(this);
-        getCommand("spawnRazlomTest").setExecutor(this);
 
         Bukkit.getPluginManager().registerEvents(new magicCerebrum(this), this);
         Bukkit.getPluginManager().registerEvents(this, this);
@@ -28,24 +27,46 @@ public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listene
 
         teamManager = new TeamManager(this);
         getCommand("viewteam").setExecutor(teamManager);
-    
     }
 
     @Override
     public void onDisable() {
-       
+        // Cleanup resources if necessary
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (command.getName().equalsIgnoreCase("spawnRazlom")) {
-            riftManager.spawnRift(sender);
-            return true;
-        } else if (command.getName().equalsIgnoreCase("spawnRazlomTest") && sender instanceof Player) {
+            if (args.length < 2) {
+                sender.sendMessage("§cИспользование: /spawnRazlom <RiftName> <open|close>");
+                return true;
+            }
+        
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("§cЭту команду может использовать только игрок!");
+                return true;
+            }
+        
             Player player = (Player) sender;
-            riftManager.spawnTestSchematic(player);
+            String riftName = args[0];
+            boolean open = args[1].equalsIgnoreCase("open");
+        
+            if (!args[1].equalsIgnoreCase("open") && !args[1].equalsIgnoreCase("close")) {
+                player.sendMessage("§cВторой аргумент должен быть 'open' или 'close'!");
+                return true;
+            }
+        
+            riftManager.toggleRift(riftName, open, player);
+        
+            
+            if (open) {
+                player.sendMessage("§eЗапущен мониторинг для разлома: " + riftName);
+                riftManager.monitorPlayersInRift(riftName);
+            }
             return true;
-        } else if (command.getName().equalsIgnoreCase("fracmenu") && sender instanceof Player) {
+        }
+
+        if (command.getName().equalsIgnoreCase("fracmenu") && sender instanceof Player) {
             Player player = (Player) sender;
             factionManager.showFactionMenu(player);
             return true;
