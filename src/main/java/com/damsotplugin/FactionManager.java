@@ -27,6 +27,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.yaml.snakeyaml.Yaml;
 
+import me.clip.placeholderapi.PlaceholderAPI;
+
 public class FactionManager implements CommandExecutor, Listener {
 
     private final DamsotPlugin plugin;
@@ -62,34 +64,37 @@ public class FactionManager implements CommandExecutor, Listener {
             return;
         }
     
-        Inventory menu = Bukkit.createInventory(null, 27, "Фракция " + faction);
+        
+        String title = PlaceholderAPI.setPlaceholders(player, "&f<shift:-14>%oraxen_orden_menu%");
+        Inventory menu = Bukkit.createInventory(null, 54, title); 
     
         
-        ItemStack item = new ItemStack(Material.EMERALD);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
+        ItemStack factionMembersItem = new ItemStack(Material.EMERALD);
+        ItemMeta factionMembersMeta = factionMembersItem.getItemMeta();
+        if (factionMembersMeta != null) {
             List<String> lore = getFactionMembers(faction);
-            meta.setDisplayName("Участники " + faction);
-            meta.setLore(lore);
-            item.setItemMeta(meta);
+            factionMembersMeta.setDisplayName("Участники " + faction);
+            factionMembersMeta.setLore(lore);
+            factionMembersItem.setItemMeta(factionMembersMeta);
         }
-        menu.setItem(13, item);
+        menu.setItem(37, factionMembersItem);
     
-    
-        int i = 21;
+        
+        int capturePointSlot = 48;
         for (Map.Entry<String, String> entry : capturePoints.entrySet()) {
-            ItemStack pointItem = new ItemStack(Material.RED_BANNER);
-            ItemMeta pointMeta = pointItem.getItemMeta();
-            if (pointMeta != null) {
-                pointMeta.setDisplayName(entry.getKey());
-                pointMeta.setLore(List.of("Владелец: " + entry.getValue()));
-                pointItem.setItemMeta(pointMeta);
+            ItemStack capturePointItem = new ItemStack(Material.RED_BANNER);
+            ItemMeta capturePointMeta = capturePointItem.getItemMeta();
+            if (capturePointMeta != null) {
+                capturePointMeta.setDisplayName(entry.getKey());
+                capturePointMeta.setLore(List.of("Владелец: " + entry.getValue()));
+                capturePointItem.setItemMeta(capturePointMeta);
             }
-            menu.setItem(i, pointItem);
-            i++;  
+            menu.setItem(capturePointSlot, capturePointItem);
+            capturePointSlot++;
         }
     
-        ItemStack treasureItem = new ItemStack(Material.GOLD_INGOT); 
+        
+        ItemStack treasureItem = new ItemStack(Material.GOLD_INGOT);
         ItemMeta treasureMeta = treasureItem.getItemMeta();
         if (treasureMeta != null) {
             treasureMeta.setDisplayName("Сокровищница");
@@ -97,8 +102,9 @@ public class FactionManager implements CommandExecutor, Listener {
             treasureMeta.setLore(List.of("Количество железа: " + ironAmount));
             treasureItem.setItemMeta(treasureMeta);
         }
-        menu.addItem(treasureItem);
+        menu.setItem(43, treasureItem);
     
+        
         player.openInventory(menu);
     }
 
