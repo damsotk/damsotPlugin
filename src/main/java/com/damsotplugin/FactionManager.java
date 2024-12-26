@@ -7,8 +7,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -27,34 +27,47 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.yaml.snakeyaml.Yaml;
 
-import me.clip.placeholderapi.PlaceholderAPI;
-
 public class FactionManager implements CommandExecutor, Listener {
 
+    /////////////////////////////////////////////////////
     private final DamsotPlugin plugin;
     private final Map<UUID, String> playerFactions = new HashMap<>();
     private final Map<String, String> capturePoints = new HashMap<>();
     private final Map<String, Location> capturePointLocations = new HashMap<>();
+    private final Map<String, Map<String, Integer>> pointTreasuries = new HashMap<>();
+    private final Map<String, Material> pointResources = new HashMap<>();
 
-    private final Map<String, Integer> factionIronStorage = new HashMap<>();
-    private final List<String> allowedFactions = List.of("Дамсот", "Ковенант", "Орден");
+    private final List<String> allowedFactions = List.of("Кагорта", "Ковенант", "Орден", "Отрекшиеся", "Рогороссо");
 
     public FactionManager(DamsotPlugin plugin) {
         this.plugin = plugin;
         loadFactionData();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
-        
-        capturePoints.put("Заброшенные шахты", "Никто");
-        capturePoints.put("Точка 2", "Никто");
-        capturePoints.put("Точка 3", "Никто");
+        initializeCapturePoints();
+        startResourceProductionTask();
+    }
 
+    private void initializeCapturePoints() {
         
-        capturePointLocations.put("Заброшенные шахты", new Location(Bukkit.getWorld("Arnhold"), 1173, 170, -557));
+        if (capturePoints.isEmpty()) {
+            capturePoints.put("Точка 1", "Никто");
+            capturePoints.put("Точка 2", "Никто");
+            capturePoints.put("Точка 3", "Никто");
+        }
+
+        capturePointLocations.put("Точка 1", new Location(Bukkit.getWorld("Arnhold"), 1173, 170, -557));
         capturePointLocations.put("Точка 2", new Location(Bukkit.getWorld("Arnhold"), 1173, 170, -555));
         capturePointLocations.put("Точка 3", new Location(Bukkit.getWorld("Arnhold"), 1173, 170, -553));
 
-        startIronProductionTask();
+        pointResources.put("Точка 1", Material.IRON_INGOT);
+        pointResources.put("Точка 2", Material.GOLD_INGOT);
+        pointResources.put("Точка 3", Material.DIAMOND);
+
+        
+        for (String point : capturePoints.keySet()) {
+            pointTreasuries.put(point, new HashMap<>());
+        }
     }
 
     public void showFactionMenu(Player player) {
@@ -63,48 +76,41 @@ public class FactionManager implements CommandExecutor, Listener {
             player.sendMessage("Вы не состоите ни в одной фракции.");
             return;
         }
-    
+
+        Inventory menu = Bukkit.createInventory(null, 27, "Фракция " + faction);
+
         
-        String title = PlaceholderAPI.setPlaceholders(player, "&f<shift:-14>%oraxen_orden_menu%");
-        Inventory menu = Bukkit.createInventory(null, 54, title); 
-    
-        
-        ItemStack factionMembersItem = new ItemStack(Material.EMERALD);
-        ItemMeta factionMembersMeta = factionMembersItem.getItemMeta();
-        if (factionMembersMeta != null) {
+        ItemStack membersItem = new ItemStack(Material.EMERALD);
+        ItemMeta membersMeta = membersItem.getItemMeta();
+        if (membersMeta != null) {
             List<String> lore = getFactionMembers(faction);
-            factionMembersMeta.setDisplayName("Участники " + faction);
-            factionMembersMeta.setLore(lore);
-            factionMembersItem.setItemMeta(factionMembersMeta);
+            membersMeta.setDisplayName("Участники " + faction);
+            membersMeta.setLore(lore);
+            membersItem.setItemMeta(membersMeta);
         }
-        menu.setItem(37, factionMembersItem);
-    
+        menu.setItem(13, membersItem);
+
         
-        int capturePointSlot = 48;
+        int i = 21;
         for (Map.Entry<String, String> entry : capturePoints.entrySet()) {
-            ItemStack capturePointItem = new ItemStack(Material.RED_BANNER);
-            ItemMeta capturePointMeta = capturePointItem.getItemMeta();
-            if (capturePointMeta != null) {
-                capturePointMeta.setDisplayName(entry.getKey());
-                capturePointMeta.setLore(List.of("Владелец: " + entry.getValue()));
-                capturePointItem.setItemMeta(capturePointMeta);
+            String pointName = entry.getKey();
+            String ownerFaction = entry.getValue();
+
+            ItemStack pointItem = new ItemStack(pointResources.get(pointName));
+            ItemMeta pointMeta = pointItem.getItemMeta();
+            if (pointMeta != null) {
+                pointMeta.setDisplayName(pointName);
+                pointMeta.setLore(List.of(
+                        "Владелец: " + ownerFaction,
+                        "Ресурс: " + pointResources.get(pointName).name(),
+                        "Количество: " + pointTreasuries.get(pointName).getOrDefault(faction, 0)
+                ));
+                pointItem.setItemMeta(pointMeta);
             }
-            menu.setItem(capturePointSlot, capturePointItem);
-            capturePointSlot++;
+            menu.setItem(i, pointItem);
+            i++;
         }
-    
-        
-        ItemStack treasureItem = new ItemStack(Material.GOLD_INGOT);
-        ItemMeta treasureMeta = treasureItem.getItemMeta();
-        if (treasureMeta != null) {
-            treasureMeta.setDisplayName("Сокровищница");
-            int ironAmount = factionIronStorage.getOrDefault(faction, 0);
-            treasureMeta.setLore(List.of("Количество железа: " + ironAmount));
-            treasureItem.setItemMeta(treasureMeta);
-        }
-        menu.setItem(43, treasureItem);
-    
-        
+
         player.openInventory(menu);
     }
 
@@ -113,102 +119,73 @@ public class FactionManager implements CommandExecutor, Listener {
         Player player = event.getPlayer();
         UUID playerId = player.getUniqueId();
         String faction = playerFactions.get(playerId);
-    
-        
+
         if (faction == null) {
             return;
         }
-    
-        
+
         Location playerLocation = player.getLocation();
-    
-        
+
         for (Map.Entry<String, Location> entry : capturePointLocations.entrySet()) {
             String pointName = entry.getKey();
             Location pointLocation = entry.getValue();
-    
-            
-            if (playerLocation.getWorld().equals(pointLocation.getWorld()) &&
-                playerLocation.distance(pointLocation) < 1.0) {  
-    
-                
+
+            if (playerLocation.getWorld().equals(pointLocation.getWorld())
+                    && playerLocation.distance(pointLocation) < 1.0) {
+
                 if (!capturePoints.get(pointName).equals(faction)) {
                     capturePoints.put(pointName, faction);
                     Bukkit.broadcastMessage("Точка " + pointName + " захвачена фракцией " + faction + "!");
                     plugin.getLogger().info("Точка " + pointName + " захвачена фракцией " + faction);
+                    saveFactionData();
                 }
                 break;
             }
         }
     }
 
-    private void updateTreasureLore(String faction) {
-        Inventory menu = Bukkit.createInventory(null, 27, "Фракция " + faction);
-        
-        
-        ItemStack treasureItem = new ItemStack(Material.GOLD_INGOT);  
-        ItemMeta treasureMeta = treasureItem.getItemMeta();
-        if (treasureMeta != null) {
-            treasureMeta.setDisplayName("Сокровищница");
-            int ironAmount = factionIronStorage.getOrDefault(faction, 0);
-            treasureMeta.setLore(List.of("Количество железа: " + ironAmount));
-            treasureItem.setItemMeta(treasureMeta);
-        }
-        menu.addItem(treasureItem);
-        
-        
-        Player player = Bukkit.getPlayer(faction);
-        if (player != null && player.getOpenInventory() != null) {
-            player.updateInventory();
-        }
-    }
-
-    private void startIronProductionTask() {
+    private void startResourceProductionTask() {
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             capturePoints.forEach((point, faction) -> {
                 if (!faction.equals("Никто")) {
-                    factionIronStorage.put(faction, factionIronStorage.getOrDefault(faction, 0) + 1);
-                    updateTreasureLore(faction);
+                    Material resource = pointResources.get(point);
+                    pointTreasuries.get(point).put(faction,
+                            pointTreasuries.get(point).getOrDefault(faction, 0) + 1);
+                    saveFactionData();
                 }
             });
-        }, 0L, 40L); 
+        }, 0L, 40L);
     }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (event.getView().getTitle().startsWith("Фракция")) {
             event.setCancelled(true);
-    
-            
+
             ItemStack clickedItem = event.getCurrentItem();
-            if (clickedItem != null && clickedItem.getType() == Material.GOLD_INGOT) {
+            if (clickedItem != null && pointResources.containsValue(clickedItem.getType())) {
                 Player player = (Player) event.getWhoClicked();
                 String faction = playerFactions.get(player.getUniqueId());
-                
-                
-                if (!isPlayerAllowedToTakeIron(player)) {
-                    player.sendMessage("У вас нет прав на доступ к сокровищнице.");
+
+                if (faction == null) {
                     return;
                 }
-    
-                if (faction == null) {
-                    return; 
-                }
-    
-                
-                int ironAmount = factionIronStorage.getOrDefault(faction, 0);
-                if (ironAmount > 0) {
-                    
-                    factionIronStorage.put(faction, 0); 
-                    player.getInventory().addItem(new ItemStack(Material.IRON_INGOT, ironAmount));
-    
-                    
-                    updateTreasureLore(faction);
-    
-                    
-                    player.sendMessage("Вы забрали все железо из сокровищницы фракции " + faction + ".");
-                } else {
-                    player.sendMessage("Сокровищница вашей фракции пуста.");
+
+                String pointName = pointResources.entrySet().stream()
+                        .filter(entry -> entry.getValue().equals(clickedItem.getType()))
+                        .map(Map.Entry::getKey)
+                        .findFirst()
+                        .orElse(null);
+
+                if (pointName != null) {
+                    int resourceAmount = pointTreasuries.get(pointName).getOrDefault(faction, 0);
+                    if (resourceAmount > 0) {
+                        pointTreasuries.get(pointName).put(faction, 0);
+                        player.getInventory().addItem(new ItemStack(pointResources.get(pointName), resourceAmount));
+                        player.sendMessage("Вы забрали ресурсы из сокровищницы " + pointName + ".");
+                    } else {
+                        player.sendMessage("Сокровищница точки пуста.");
+                    }
                 }
             }
         }
@@ -233,16 +210,30 @@ public class FactionManager implements CommandExecutor, Listener {
         }
         try (FileReader reader = new FileReader(file)) {
             Yaml yaml = new Yaml();
-            Map<String, String> loadedData = yaml.load(reader);
-            if (loadedData != null) {
-                loadedData.forEach((playerName, faction) -> {
-                    OfflinePlayer player = Bukkit.getOfflinePlayer(playerName); 
-                    if (player != null && player.getUniqueId() != null) {
-                        playerFactions.put(player.getUniqueId(), faction);
-                    } else {
-                        plugin.getLogger().warning("Неверное имя игрока в playerFaction.yml: " + playerName);
-                    }
-                });
+            Map<String, Object> data = yaml.load(reader);
+            if (data != null) {
+                
+                Map<String, String> loadedFactions = (Map<String, String>) data.get("playerFactions");
+                if (loadedFactions != null) {
+                    loadedFactions.forEach((playerName, faction) -> {
+                        OfflinePlayer player = Bukkit.getOfflinePlayer(playerName);
+                        if (player != null && player.getUniqueId() != null) {
+                            playerFactions.put(player.getUniqueId(), faction);
+                        }
+                    });
+                }
+
+                
+                Map<String, String> loadedPoints = (Map<String, String>) data.get("capturePoints");
+                if (loadedPoints != null) {
+                    capturePoints.putAll(loadedPoints); 
+                }
+
+                
+                Map<String, Map<String, Integer>> loadedTreasuries = (Map<String, Map<String, Integer>>) data.get("pointTreasuries");
+                if (loadedTreasuries != null) {
+                    pointTreasuries.putAll(loadedTreasuries);
+                }
             }
         } catch (IOException e) {
             plugin.getLogger().warning("Не удалось загрузить playerFaction.yml");
@@ -251,7 +242,9 @@ public class FactionManager implements CommandExecutor, Listener {
 
     private void saveDefaultFactionData(File file) {
         try (FileWriter writer = new FileWriter(file)) {
-            writer.write("PlayerUUID: Дамсот\n");
+            writer.write("playerFactions: {}\n");
+            writer.write("capturePoints: {Точка 1: 'Никто', Точка 2: 'Никто', Точка 3: 'Никто'}\n");
+            writer.write("pointTreasuries: {}\n");
         } catch (IOException e) {
             plugin.getLogger().warning("Не удалось сохранить данные по умолчанию");
         }
@@ -260,16 +253,19 @@ public class FactionManager implements CommandExecutor, Listener {
     public void saveFactionData() {
         File file = new File(plugin.getDataFolder(), "playerFaction.yml");
         Yaml yaml = new Yaml();
-        Map<String, String> dataToSave = new HashMap<>();
 
-        for (Map.Entry<UUID, String> entry : playerFactions.entrySet()) {
-            String playerName = Bukkit.getOfflinePlayer(entry.getKey()).getName();
+        Map<String, Object> dataToSave = new HashMap<>();
+        Map<String, String> playerFactionData = new HashMap<>();
+        playerFactions.forEach((uuid, faction) -> {
+            String playerName = Bukkit.getOfflinePlayer(uuid).getName();
             if (playerName != null) {
-                dataToSave.put(playerName, entry.getValue());
-            } else {
-                plugin.getLogger().warning("Не удалось найти имя игрока для UUID: " + entry.getKey());
+                playerFactionData.put(playerName, faction);
             }
-        }
+        });
+
+        dataToSave.put("playerFactions", playerFactionData);
+        dataToSave.put("capturePoints", capturePoints);
+        dataToSave.put("pointTreasuries", pointTreasuries);
 
         try (FileWriter writer = new FileWriter(file)) {
             yaml.dump(dataToSave, writer);
@@ -279,19 +275,7 @@ public class FactionManager implements CommandExecutor, Listener {
     }
 
     public void assignPlayerToFaction(Player player, String faction) {
-        if (playerFactions.containsKey(player.getUniqueId())) {
-            plugin.getLogger().info("Игрок " + player.getName() + " сменил фракцию.");
-        }
         playerFactions.put(player.getUniqueId(), faction);
-        saveFactionData();
-    }
-
-    public String getPlayerFaction(UUID playerId) {
-        return playerFactions.get(playerId);
-    }
-
-    public void removePlayerFromFaction(UUID playerId) {
-        playerFactions.remove(playerId);
         saveFactionData();
     }
 
@@ -307,7 +291,7 @@ public class FactionManager implements CommandExecutor, Listener {
             String faction = args[1];
 
             if (!allowedFactions.contains(faction)) {
-                sender.sendMessage("Неверное название фракции. Разрешенные фракции: Дамсот, Ковенант, Орден.");
+                sender.sendMessage("Неверное название фракции. Разрешенные фракции: " + allowedFactions);
                 return true;
             }
 
@@ -327,14 +311,4 @@ public class FactionManager implements CommandExecutor, Listener {
         }
         return false;
     }
-
-    public void capturePoint(String pointName, String faction) {
-        if (capturePoints.containsKey(pointName)) {
-            capturePoints.put(pointName, faction);
-            plugin.getLogger().info("Точка " + pointName + " захвачена фракцией " + faction);
-        } else {
-            plugin.getLogger().warning("Точка с именем " + pointName + " не найдена.");
-        }
-    }
-
 }
