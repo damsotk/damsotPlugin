@@ -49,7 +49,7 @@ public class FactionManager implements CommandExecutor, Listener {
     }
 
     private void initializeCapturePoints() {
-        
+
         if (capturePoints.isEmpty()) {
             capturePoints.put("Точка 1", "Никто");
             capturePoints.put("Точка 2", "Никто");
@@ -61,10 +61,9 @@ public class FactionManager implements CommandExecutor, Listener {
         capturePointLocations.put("Точка 3", new Location(Bukkit.getWorld("Arnhold"), 1173, 170, -553));
 
         pointResources.put("Точка 1", Material.IRON_INGOT);
-        pointResources.put("Точка 2", Material.GOLD_INGOT);
+        pointResources.put("Точка 2", Material.BOOK);
         pointResources.put("Точка 3", Material.DIAMOND);
 
-        
         for (String point : capturePoints.keySet()) {
             pointTreasuries.put(point, new HashMap<>());
         }
@@ -77,9 +76,8 @@ public class FactionManager implements CommandExecutor, Listener {
             return;
         }
 
-        Inventory menu = Bukkit.createInventory(null, 27, "Фракция " + faction);
+        Inventory menu = Bukkit.createInventory(null, 54, "Фракция " + faction);
 
-        
         ItemStack membersItem = new ItemStack(Material.EMERALD);
         ItemMeta membersMeta = membersItem.getItemMeta();
         if (membersMeta != null) {
@@ -90,7 +88,6 @@ public class FactionManager implements CommandExecutor, Listener {
         }
         menu.setItem(13, membersItem);
 
-        
         int i = 21;
         for (Map.Entry<String, String> entry : capturePoints.entrySet()) {
             String pointName = entry.getKey();
@@ -102,7 +99,7 @@ public class FactionManager implements CommandExecutor, Listener {
                 pointMeta.setDisplayName(pointName);
                 pointMeta.setLore(List.of(
                         "Владелец: " + ownerFaction,
-                        "Ресурс: " + pointResources.get(pointName).name(),
+                        "Ресурс: " + (pointName.equals("Точка 2") ? "Книги" : pointResources.get(pointName).name()),
                         "Количество: " + pointTreasuries.get(pointName).getOrDefault(faction, 0)
                 ));
                 pointItem.setItemMeta(pointMeta);
@@ -144,6 +141,35 @@ public class FactionManager implements CommandExecutor, Listener {
         }
     }
 
+    private ItemStack generateRandomBook() {
+        double random = Math.random();
+        String title = "Обычная книга"; 
+        String lore = "Обычное содержание книги.";  
+
+        if (random < 0.7) {
+            
+            title = "Обычная книга";
+            lore = "Обычное содержание книги.";
+        } else if (random < 0.9) {
+           
+            title = "Эпическая книга";
+            lore = "Редкое содержание книги.";
+        } else {
+            
+            title = "Легендарная книга";
+            lore = "Легендарное содержание книги.";
+        }
+
+        ItemStack book = new ItemStack(Material.BOOK);
+        ItemMeta meta = book.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(title);
+            meta.setLore(List.of(lore));
+            book.setItemMeta(meta);
+        }
+        return book;
+    }
+
     private void startResourceProductionTask() {
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             capturePoints.forEach((point, faction) -> {
@@ -158,19 +184,21 @@ public class FactionManager implements CommandExecutor, Listener {
     }
 
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (event.getView().getTitle().startsWith("Фракция")) {
-            event.setCancelled(true);
+public void onInventoryClick(InventoryClickEvent event) {
+    if (event.getView().getTitle().startsWith("Фракция")) {
+        event.setCancelled(true);
 
-            ItemStack clickedItem = event.getCurrentItem();
-            if (clickedItem != null && pointResources.containsValue(clickedItem.getType())) {
-                Player player = (Player) event.getWhoClicked();
-                String faction = playerFactions.get(player.getUniqueId());
+        ItemStack clickedItem = event.getCurrentItem();
+        if (clickedItem != null) {
+            Player player = (Player) event.getWhoClicked();
+            String faction = playerFactions.get(player.getUniqueId());
 
-                if (faction == null) {
-                    return;
-                }
+            if (faction == null) {
+                return;
+            }
 
+            
+            if (clickedItem.getType() != Material.BOOK && pointResources.containsValue(clickedItem.getType())) {
                 String pointName = pointResources.entrySet().stream()
                         .filter(entry -> entry.getValue().equals(clickedItem.getType()))
                         .map(Map.Entry::getKey)
@@ -187,9 +215,24 @@ public class FactionManager implements CommandExecutor, Listener {
                         player.sendMessage("Сокровищница точки пуста.");
                     }
                 }
+            } 
+            
+            else if (clickedItem.getType() == Material.BOOK && pointResources.containsValue(Material.BOOK)) {
+                String pointName = "Точка 2"; 
+                int resourceAmount = pointTreasuries.get(pointName).getOrDefault(faction, 0);
+                if (resourceAmount > 0) {
+                    pointTreasuries.get(pointName).put(faction, 0);
+                    for (int i = 0; i < resourceAmount; i++) {
+                        player.getInventory().addItem(generateRandomBook());
+                    }
+                    player.sendMessage("Вы забрали книги из сокровищницы " + pointName + ".");
+                } else {
+                    player.sendMessage("Сокровищница точки пуста.");
+                }
             }
         }
     }
+}
 
     private boolean isPlayerAllowedToTakeIron(Player player) {
         String playerName = player.getName().toLowerCase();
@@ -212,7 +255,7 @@ public class FactionManager implements CommandExecutor, Listener {
             Yaml yaml = new Yaml();
             Map<String, Object> data = yaml.load(reader);
             if (data != null) {
-                
+
                 Map<String, String> loadedFactions = (Map<String, String>) data.get("playerFactions");
                 if (loadedFactions != null) {
                     loadedFactions.forEach((playerName, faction) -> {
@@ -223,13 +266,11 @@ public class FactionManager implements CommandExecutor, Listener {
                     });
                 }
 
-                
                 Map<String, String> loadedPoints = (Map<String, String>) data.get("capturePoints");
                 if (loadedPoints != null) {
-                    capturePoints.putAll(loadedPoints); 
+                    capturePoints.putAll(loadedPoints);
                 }
 
-                
                 Map<String, Map<String, Integer>> loadedTreasuries = (Map<String, Map<String, Integer>>) data.get("pointTreasuries");
                 if (loadedTreasuries != null) {
                     pointTreasuries.putAll(loadedTreasuries);
