@@ -1,14 +1,16 @@
 package com.damsotplugin;
 
+
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -26,6 +28,9 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.yaml.snakeyaml.Yaml;
+
+import me.clip.placeholderapi.PlaceholderAPI;
+
 
 public class FactionManager implements CommandExecutor, Listener {
 
@@ -75,20 +80,52 @@ public class FactionManager implements CommandExecutor, Listener {
             player.sendMessage("Вы не состоите ни в одной фракции.");
             return;
         }
+        String title;
+        switch (faction) {
+            case "Орден":
+                title = PlaceholderAPI.setPlaceholders(player, "&f<shift:-14>%oraxen_orden_menu%");
+                break;
+            case "Когорта":
+                title = PlaceholderAPI.setPlaceholders(player, "&f<shift:-14>%oraxen_kogorta_menu%");
+                break;
+            case "Ковенант":
+                title = PlaceholderAPI.setPlaceholders(player, "&f<shift:-14>%oraxen_kovenant_menu%");
+                break;
+            case "Отрекшиеся":
+                title = PlaceholderAPI.setPlaceholders(player, "&f<shift:-14>%oraxen_otrek_menu%");
+                break;
+            case "Рогороссо":
+                title = PlaceholderAPI.setPlaceholders(player, "&f<shift:-14>%oraxen_rogoroso_menu%");
+                break;
+            default:
+                title = PlaceholderAPI.setPlaceholders(player, "&f<shift:-14>%oraxen_default_menu%");
+                break;
+        }
 
-        Inventory menu = Bukkit.createInventory(null, 54, "Фракция " + faction);
+        
+        Inventory menu = Bukkit.createInventory(null, 54, title); 
 
         ItemStack membersItem = new ItemStack(Material.EMERALD);
         ItemMeta membersMeta = membersItem.getItemMeta();
         if (membersMeta != null) {
             List<String> lore = getFactionMembers(faction);
-            membersMeta.setDisplayName("Участники " + faction);
-            membersMeta.setLore(lore);
+            
+            List<String> coloredLore = new ArrayList<>();
+            for (int i = 0; i < lore.size(); i++) {
+                if (i % 2 == 0) {
+                    coloredLore.add("§8○ " + lore.get(i));
+                } else {
+                    coloredLore.add("§7○ " + lore.get(i)); 
+                }
+            }
+        
+            membersMeta.setDisplayName("§fУчастники " + faction);
+            membersMeta.setLore(coloredLore);
             membersItem.setItemMeta(membersMeta);
         }
-        menu.setItem(13, membersItem);
+        menu.setItem(43, membersItem);
 
-        int i = 21;
+        int i = 48;
         for (Map.Entry<String, String> entry : capturePoints.entrySet()) {
             String pointName = entry.getKey();
             String ownerFaction = entry.getValue();
@@ -98,9 +135,9 @@ public class FactionManager implements CommandExecutor, Listener {
             if (pointMeta != null) {
                 pointMeta.setDisplayName(pointName);
                 pointMeta.setLore(List.of(
-                        "Владелец: " + ownerFaction,
-                        "Ресурс: " + (pointName.equals("Точка 2") ? "Книги" : pointResources.get(pointName).name()),
-                        "Количество: " + pointTreasuries.get(pointName).getOrDefault(faction, 0)
+                        "§7Владелец: " + ownerFaction,
+                        "§8Ресурс: " + (pointName.equals("Точка 2") ? "Книги" : pointResources.get(pointName).name()),
+                        "§7Количество: " + pointTreasuries.get(pointName).getOrDefault(faction, 0)
                 ));
                 pointItem.setItemMeta(pointMeta);
             }
@@ -143,19 +180,19 @@ public class FactionManager implements CommandExecutor, Listener {
 
     private ItemStack generateRandomBook() {
         double random = Math.random();
-        String title = "Обычная книга"; 
-        String lore = "Обычное содержание книги.";  
+        String title = "Обычная книга";
+        String lore = "Обычное содержание книги.";
 
         if (random < 0.7) {
-            
+
             title = "Обычная книга";
             lore = "Обычное содержание книги.";
         } else if (random < 0.9) {
-           
+
             title = "Эпическая книга";
             lore = "Редкое содержание книги.";
         } else {
-            
+
             title = "Легендарная книга";
             lore = "Легендарное содержание книги.";
         }
@@ -184,55 +221,53 @@ public class FactionManager implements CommandExecutor, Listener {
     }
 
     @EventHandler
-public void onInventoryClick(InventoryClickEvent event) {
-    if (event.getView().getTitle().startsWith("Фракция")) {
-        event.setCancelled(true);
+    public void onInventoryClick(InventoryClickEvent event) {
+        String title = event.getView().getTitle();
+        if (title.contains("ꐐ") || title.contains("ꐑ") || title.contains("ꐒ") || title.contains("ꐓ") || title.contains("ꐔ")) {
+            event.setCancelled(true);
 
-        ItemStack clickedItem = event.getCurrentItem();
-        if (clickedItem != null) {
-            Player player = (Player) event.getWhoClicked();
-            String faction = playerFactions.get(player.getUniqueId());
+            ItemStack clickedItem = event.getCurrentItem();
+            if (clickedItem != null) {
+                Player player = (Player) event.getWhoClicked();
+                String faction = playerFactions.get(player.getUniqueId());
 
-            if (faction == null) {
-                return;
-            }
+                if (faction == null) {
+                    return;
+                }
 
-            
-            if (clickedItem.getType() != Material.BOOK && pointResources.containsValue(clickedItem.getType())) {
-                String pointName = pointResources.entrySet().stream()
-                        .filter(entry -> entry.getValue().equals(clickedItem.getType()))
-                        .map(Map.Entry::getKey)
-                        .findFirst()
-                        .orElse(null);
+                if (clickedItem.getType() != Material.BOOK && pointResources.containsValue(clickedItem.getType())) {
+                    String pointName = pointResources.entrySet().stream()
+                            .filter(entry -> entry.getValue().equals(clickedItem.getType()))
+                            .map(Map.Entry::getKey)
+                            .findFirst()
+                            .orElse(null);
 
-                if (pointName != null) {
+                    if (pointName != null) {
+                        int resourceAmount = pointTreasuries.get(pointName).getOrDefault(faction, 0);
+                        if (resourceAmount > 0) {
+                            pointTreasuries.get(pointName).put(faction, 0);
+                            player.getInventory().addItem(new ItemStack(pointResources.get(pointName), resourceAmount));
+                            player.sendMessage("Вы забрали ресурсы из сокровищницы " + pointName + ".");
+                        } else {
+                            player.sendMessage("Сокровищница точки пуста.");
+                        }
+                    }
+                } else if (clickedItem.getType() == Material.BOOK && pointResources.containsValue(Material.BOOK)) {
+                    String pointName = "Точка 2";
                     int resourceAmount = pointTreasuries.get(pointName).getOrDefault(faction, 0);
                     if (resourceAmount > 0) {
                         pointTreasuries.get(pointName).put(faction, 0);
-                        player.getInventory().addItem(new ItemStack(pointResources.get(pointName), resourceAmount));
-                        player.sendMessage("Вы забрали ресурсы из сокровищницы " + pointName + ".");
+                        for (int i = 0; i < resourceAmount; i++) {
+                            player.getInventory().addItem(generateRandomBook());
+                        }
+                        player.sendMessage("Вы забрали книги из сокровищницы " + pointName + ".");
                     } else {
                         player.sendMessage("Сокровищница точки пуста.");
                     }
                 }
-            } 
-            
-            else if (clickedItem.getType() == Material.BOOK && pointResources.containsValue(Material.BOOK)) {
-                String pointName = "Точка 2"; 
-                int resourceAmount = pointTreasuries.get(pointName).getOrDefault(faction, 0);
-                if (resourceAmount > 0) {
-                    pointTreasuries.get(pointName).put(faction, 0);
-                    for (int i = 0; i < resourceAmount; i++) {
-                        player.getInventory().addItem(generateRandomBook());
-                    }
-                    player.sendMessage("Вы забрали книги из сокровищницы " + pointName + ".");
-                } else {
-                    player.sendMessage("Сокровищница точки пуста.");
-                }
             }
         }
     }
-}
 
     private boolean isPlayerAllowedToTakeIron(Player player) {
         String playerName = player.getName().toLowerCase();

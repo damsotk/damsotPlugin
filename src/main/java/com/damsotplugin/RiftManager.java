@@ -10,6 +10,8 @@ import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Particle;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -152,7 +154,7 @@ public class RiftManager {
             return;
         }
     
-        Map<UUID, Long> localPlayerStayTime = new HashMap<>(); 
+        Map<UUID, Long> localPlayerStayTime = new HashMap<>();
     
         new BukkitRunnable() {
             @Override
@@ -177,10 +179,13 @@ public class RiftManager {
                             if (elapsedTime >= 5000) {
                                 closeRift(riftName, player);
                                 Bukkit.broadcastMessage(String.format("§f[Ковенант] Игрок §a%s §fзакрыл разлом '%s'!", player.getName(), riftName));
-                                teleportNearbyPlayers(riftLocation, 20, 10); 
-                                localPlayerStayTime.clear(); 
+                                teleportNearbyPlayers(riftLocation, 20, 10);
+                                localPlayerStayTime.clear();
                                 plugin.getLogger().info("Разлом " + riftName + " закрыт игроком " + player.getName() + ".");
-                                cancel(); 
+    
+                            
+                                updatePlayerStats(player.getName());
+                                cancel();
                             }
                         }
                     } else {
@@ -193,7 +198,24 @@ public class RiftManager {
                     }
                 }
             }
-        }.runTaskTimer(plugin, 0L, 20L); 
+        }.runTaskTimer(plugin, 0L, 20L);
+    }
+    
+    
+    private void updatePlayerStats(String playerName) {
+        File file = new File(plugin.getDataFolder(), "listOfTopPlayers.yml");
+        FileConfiguration config = YamlConfiguration.loadConfiguration(file);
+    
+        String path = "closedRiftsByPlayer." + playerName;
+        int closedRifts = config.getInt(path, 0); 
+        config.set(path, closedRifts + 1); 
+    
+        try {
+            config.save(file); 
+        } catch (IOException e) {
+            plugin.getLogger().severe("Не удалось сохранить файл listOfTopPlayers.yml!");
+            e.printStackTrace();
+        }
     }
 
     public void openRift(String riftName, Player player) {
