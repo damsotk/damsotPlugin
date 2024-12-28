@@ -105,6 +105,70 @@ public class FactionManager implements CommandExecutor, Listener {
         
         Inventory menu = Bukkit.createInventory(null, 54, title); 
 
+        
+        ItemStack topPlayersItem = new ItemStack(Material.NETHER_STAR);
+        ItemMeta topPlayersMeta = topPlayersItem.getItemMeta();
+        if (topPlayersMeta != null) {
+            topPlayersMeta.setDisplayName("§fСписок закрывающих разломы");
+            List<String> topPlayersLore = new ArrayList<>();
+            File topPlayersFile = new File(plugin.getDataFolder(), "listOfTopPlayers.yml");
+        
+            if (topPlayersFile.exists()) {
+                try (FileReader reader = new FileReader(topPlayersFile)) {
+                    Yaml yaml = new Yaml();
+                    Map<String, Object> data = yaml.load(reader);
+        
+                    if (data != null && data.containsKey("closedRiftsByPlayer")) {
+                        Object nestedData = data.get("closedRiftsByPlayer");
+        
+                        if (nestedData instanceof Map) {
+                            Map<String, Object> topPlayersData = (Map<String, Object>) nestedData;
+                            final int[] rank = {1}; 
+        
+                            topPlayersData.entrySet().stream()
+                                    .sorted((e1, e2) -> {
+                                        try {
+                                            int value1 = Integer.parseInt(e1.getValue().toString());
+                                            int value2 = Integer.parseInt(e2.getValue().toString());
+                                            return Integer.compare(value2, value1);
+                                        } catch (NumberFormatException ex) {
+                                            return 0; 
+                                        }
+                                    })
+                                    .limit(10)
+                                    .forEach(entry -> {
+                                        try {
+                                            String playerName = entry.getKey();
+                                            int value = Integer.parseInt(entry.getValue().toString());
+                                            topPlayersLore.add("§8" + rank[0] + ". §7" + playerName + " - §8" + value);
+                                            rank[0]++;
+                                        } catch (NumberFormatException ex) {
+                                            plugin.getLogger().warning("Некорректные данные для игрока: " + entry);
+                                        }
+                                    });
+                        } else {
+                            topPlayersLore.add("§cНеверный формат данных в секции closedRiftsByPlayer.");
+                        }
+                    } else {
+                        topPlayersLore.add("§cНет данных для отображения.");
+                    }
+                } catch (IOException e) {
+                    plugin.getLogger().warning("Не удалось загрузить файл listOfTopPlayers.yml");
+                    topPlayersLore.add("§cОшибка при загрузке данных.");
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Неизвестная ошибка при обработке файла: " + e.getMessage());
+                    topPlayersLore.add("§cОшибка при обработке данных.");
+                }
+            } else {
+                topPlayersLore.add("§cФайл с данными отсутствует.");
+            }
+        
+            topPlayersMeta.setLore(topPlayersLore);
+            topPlayersItem.setItemMeta(topPlayersMeta);
+        }
+        
+        menu.setItem(37, topPlayersItem);
+
         ItemStack membersItem = new ItemStack(Material.EMERALD);
         ItemMeta membersMeta = membersItem.getItemMeta();
         if (membersMeta != null) {
