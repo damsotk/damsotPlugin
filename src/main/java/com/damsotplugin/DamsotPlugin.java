@@ -12,10 +12,12 @@ public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listene
     private RiftManager riftManager;
     private FactionManager factionManager;
     private TeamManager teamManager;
+    private static DamsotPlugin instance;
 
     @Override
     public void onEnable() {
         riftManager = new RiftManager(this);
+        instance = this;
         getCommand("spawnRazlom").setExecutor(this);
 
         Bukkit.getPluginManager().registerEvents(new magicCerebrum(this), this);
@@ -24,15 +26,25 @@ public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listene
         factionManager = new FactionManager(this);
         getCommand("fracmenu").setExecutor(factionManager);
         getCommand("fracadd").setExecutor(factionManager);
+        factionManager.startCaptureCheckTask();
 
         teamManager = new TeamManager(this);
         getCommand("viewteam").setExecutor(teamManager);
+
+        // getCommand("checkTownyLocation").setExecutor(new MobSpawnaddon());
+        new MobSpawnAddon();
+    }
+
+    public static DamsotPlugin getInstance() {
+        return instance;
     }
 
     @Override
     public void onDisable() {
         // Cleanup resources if necessary
     }
+
+    
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {

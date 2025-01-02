@@ -1,6 +1,5 @@
 package com.damsotplugin;
 
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -31,7 +30,6 @@ import org.yaml.snakeyaml.Yaml;
 
 import me.clip.placeholderapi.PlaceholderAPI;
 
-
 public class FactionManager implements CommandExecutor, Listener {
 
     /////////////////////////////////////////////////////
@@ -56,16 +54,16 @@ public class FactionManager implements CommandExecutor, Listener {
     private void initializeCapturePoints() {
 
         if (capturePoints.isEmpty()) {
-            capturePoints.put("Точка 1", "Никто");
+            capturePoints.put("Заброшенная шахта", "Никто");
             capturePoints.put("Точка 2", "Никто");
             capturePoints.put("Точка 3", "Никто");
         }
 
-        capturePointLocations.put("Точка 1", new Location(Bukkit.getWorld("Arnhold"), 1173, 170, -557));
+        capturePointLocations.put("Заброшенная шахта", new Location(Bukkit.getWorld("Arnhold"), -1618, 23, 1499));
         capturePointLocations.put("Точка 2", new Location(Bukkit.getWorld("Arnhold"), 1173, 170, -555));
         capturePointLocations.put("Точка 3", new Location(Bukkit.getWorld("Arnhold"), 1173, 170, -553));
 
-        pointResources.put("Точка 1", Material.IRON_INGOT);
+        pointResources.put("Заброшенная шахта", Material.IRON_INGOT);
         pointResources.put("Точка 2", Material.BOOK);
         pointResources.put("Точка 3", Material.DIAMOND);
 
@@ -102,29 +100,27 @@ public class FactionManager implements CommandExecutor, Listener {
                 break;
         }
 
-        
-        Inventory menu = Bukkit.createInventory(null, 54, title); 
+        Inventory menu = Bukkit.createInventory(null, 54, title);
 
-        
         ItemStack topPlayersItem = new ItemStack(Material.NETHER_STAR);
         ItemMeta topPlayersMeta = topPlayersItem.getItemMeta();
         if (topPlayersMeta != null) {
             topPlayersMeta.setDisplayName("§fСписок закрывающих разломы");
             List<String> topPlayersLore = new ArrayList<>();
             File topPlayersFile = new File(plugin.getDataFolder(), "listOfTopPlayers.yml");
-        
+
             if (topPlayersFile.exists()) {
                 try (FileReader reader = new FileReader(topPlayersFile)) {
                     Yaml yaml = new Yaml();
                     Map<String, Object> data = yaml.load(reader);
-        
+
                     if (data != null && data.containsKey("closedRiftsByPlayer")) {
                         Object nestedData = data.get("closedRiftsByPlayer");
-        
+
                         if (nestedData instanceof Map) {
                             Map<String, Object> topPlayersData = (Map<String, Object>) nestedData;
-                            final int[] rank = {1}; 
-        
+                            final int[] rank = {1};
+
                             topPlayersData.entrySet().stream()
                                     .sorted((e1, e2) -> {
                                         try {
@@ -132,7 +128,7 @@ public class FactionManager implements CommandExecutor, Listener {
                                             int value2 = Integer.parseInt(e2.getValue().toString());
                                             return Integer.compare(value2, value1);
                                         } catch (NumberFormatException ex) {
-                                            return 0; 
+                                            return 0;
                                         }
                                     })
                                     .limit(10)
@@ -162,27 +158,27 @@ public class FactionManager implements CommandExecutor, Listener {
             } else {
                 topPlayersLore.add("§cФайл с данными отсутствует.");
             }
-        
+
             topPlayersMeta.setLore(topPlayersLore);
             topPlayersItem.setItemMeta(topPlayersMeta);
         }
-        
+
         menu.setItem(37, topPlayersItem);
 
         ItemStack membersItem = new ItemStack(Material.EMERALD);
         ItemMeta membersMeta = membersItem.getItemMeta();
         if (membersMeta != null) {
             List<String> lore = getFactionMembers(faction);
-            
+
             List<String> coloredLore = new ArrayList<>();
             for (int i = 0; i < lore.size(); i++) {
                 if (i % 2 == 0) {
                     coloredLore.add("§8○ " + lore.get(i));
                 } else {
-                    coloredLore.add("§7○ " + lore.get(i)); 
+                    coloredLore.add("§7○ " + lore.get(i));
                 }
             }
-        
+
             membersMeta.setDisplayName("§fУчастники " + faction);
             membersMeta.setLore(coloredLore);
             membersItem.setItemMeta(membersMeta);
@@ -212,34 +208,89 @@ public class FactionManager implements CommandExecutor, Listener {
         player.openInventory(menu);
     }
 
+
+    private final Map<UUID, String> playerOnPoint = new HashMap<>();
+    private final Map<String, Long> playerTimeOnPoint = new HashMap<>();
+    private final Map<UUID, Long> lastNotificationTime = new HashMap<>(); 
+    private final long CAPTURE_TIME = 20 * 60 * 1000;
+    
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
         UUID playerId = player.getUniqueId();
+        Location playerLocation = player.getLocation();
         String faction = playerFactions.get(playerId);
-
+    
         if (faction == null) {
             return;
         }
-
-        Location playerLocation = player.getLocation();
-
+    
         for (Map.Entry<String, Location> entry : capturePointLocations.entrySet()) {
             String pointName = entry.getKey();
             Location pointLocation = entry.getValue();
-
+    
             if (playerLocation.getWorld().equals(pointLocation.getWorld())
                     && playerLocation.distance(pointLocation) < 1.0) {
-
-                if (!capturePoints.get(pointName).equals(faction)) {
-                    capturePoints.put(pointName, faction);
-                    Bukkit.broadcastMessage("Точка " + pointName + " захвачена фракцией " + faction + "!");
-                    plugin.getLogger().info("Точка " + pointName + " захвачена фракцией " + faction);
-                    saveFactionData();
+                
+                if (!playerOnPoint.containsKey(playerId) || !playerOnPoint.get(playerId).equals(pointName)) {
+                    
+                    playerOnPoint.put(playerId, pointName);
+                    playerTimeOnPoint.put(playerId.toString(), System.currentTimeMillis());
+                    lastNotificationTime.put(playerId, 0L); 
+                    Bukkit.broadcastMessage("§7[§8Троица§7] §7" + "Кто-то пытается захватить точку " + pointName + "!");
                 }
-                break;
+            } else if (playerOnPoint.containsKey(playerId) && playerOnPoint.get(playerId).equals(pointName)) {
+                
+                playerOnPoint.remove(playerId);
+                playerTimeOnPoint.remove(playerId.toString());
+                lastNotificationTime.remove(playerId); 
+                player.sendMessage("§7[§8Троица§7] Вы покинули точку " + pointName + ".");
             }
         }
+    }
+    
+    public void startCaptureCheckTask() {
+        Bukkit.getLogger().info("Запущена задача проверки захвата точек.");
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            long currentTime = System.currentTimeMillis();
+    
+            for (Map.Entry<UUID, String> entry : playerOnPoint.entrySet()) {
+                UUID playerId = entry.getKey();
+                String pointName = entry.getValue();
+                Player player = Bukkit.getPlayer(playerId);
+    
+                if (player != null && player.isOnline() && playerTimeOnPoint.containsKey(playerId.toString())) {
+                    long timeSpent = currentTime - playerTimeOnPoint.get(playerId.toString());
+                    long timeRemaining = CAPTURE_TIME - timeSpent;
+    
+                    if (timeRemaining <= 0) {
+                        // Игрок успешно захватил точку
+                        String faction = playerFactions.get(playerId);
+    
+                        if (faction != null && !capturePoints.get(pointName).equals(faction)) {
+                            capturePoints.put(pointName, faction);
+                            Bukkit.broadcastMessage("§7[§8Троица§7] §7Аванпост " + pointName + " §7захвачена фракцией " + faction + "!");
+                            plugin.getLogger().info("Точка " + pointName + " захвачена фракцией " + faction);
+                            saveFactionData();
+                        }
+    
+                        
+                        playerOnPoint.remove(playerId);
+                        playerTimeOnPoint.remove(playerId.toString());
+                        lastNotificationTime.remove(playerId);
+                    } else {
+                        
+                        long lastNotify = lastNotificationTime.getOrDefault(playerId, 0L);
+                        if (currentTime - lastNotify >= 5000) {
+                            int minutes = (int) (timeRemaining / 60000);
+                            int seconds = (int) ((timeRemaining % 60000) / 1000);
+                            player.sendMessage("§7[§8Троица§7] §7Осталось времени до захвата: " + String.format("%02d:%02d", minutes, seconds));
+                            lastNotificationTime.put(playerId, currentTime); 
+                        }
+                    }
+                }
+            }
+        }, 0L, 20L); 
     }
 
     private ItemStack generateRandomBook() {
@@ -383,7 +434,7 @@ public class FactionManager implements CommandExecutor, Listener {
     private void saveDefaultFactionData(File file) {
         try (FileWriter writer = new FileWriter(file)) {
             writer.write("playerFactions: {}\n");
-            writer.write("capturePoints: {Точка 1: 'Никто', Точка 2: 'Никто', Точка 3: 'Никто'}\n");
+            writer.write("capturePoints: {Заброшенная шахта: 'Никто', Точка 2: 'Никто', Точка 3: 'Никто'}\n");
             writer.write("pointTreasuries: {}\n");
         } catch (IOException e) {
             plugin.getLogger().warning("Не удалось сохранить данные по умолчанию");

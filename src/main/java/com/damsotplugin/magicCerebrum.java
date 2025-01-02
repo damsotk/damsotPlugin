@@ -185,9 +185,9 @@ public class magicCerebrum implements Listener {
                 System.out.println("Игрок " + player.getName() + " пытается использовать заклинание: " + message);
                 System.out.println("Изученные заклинания игрока: " + (learnedSpellsSet != null ? learnedSpellsSet.toString() : "Нет изученных заклинаний"));
     
-                // Проверяем, изучено ли заклинание
+               
                 if (isSpellLearned(player, message)) {
-                    // Вызов соответствующего метода заклинания
+                    
                     switch (message) {
                         case "неодолео":
                             handleNeodoleoSpell(player);
