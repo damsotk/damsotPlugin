@@ -12,8 +12,11 @@ import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.WorldEdit;
@@ -25,6 +28,8 @@ import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
 import com.sk89q.worldedit.function.operation.Operations;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.session.ClipboardHolder;
+
+import io.th0rgal.oraxen.api.OraxenItems;
 
 public class RiftManager {
 
@@ -41,49 +46,49 @@ public class RiftManager {
 
     private void initializeRiftData() {
         riftDataMap.put("Rift1", new RiftData(
-            new Location(Bukkit.getWorld("Arnhold"), 476, 61, -756),
-            BlockVector3.at(476, 61, -756),
-            BlockVector3.at(485, 66, -755)
+                new Location(Bukkit.getWorld("Arnhold"), 476, 61, -756),
+                BlockVector3.at(476, 61, -756),
+                BlockVector3.at(485, 66, -755)
         ));
         riftDataMap.put("Rift2", new RiftData(
-            new Location(Bukkit.getWorld("Arnhold"), 474, 45, -206),
-            BlockVector3.at(474, 45, -206),
-            BlockVector3.at(471, 50, -207)
+                new Location(Bukkit.getWorld("Arnhold"), 474, 45, -206),
+                BlockVector3.at(474, 45, -206),
+                BlockVector3.at(471, 50, -207)
         ));
         riftDataMap.put("Rift3", new RiftData(
-            new Location(Bukkit.getWorld("Arnhold"), 467, 49, 536),
-            BlockVector3.at(467, 49, 536),
-            BlockVector3.at(479, 51, 548)
+                new Location(Bukkit.getWorld("Arnhold"), 467, 49, 536),
+                BlockVector3.at(467, 49, 536),
+                BlockVector3.at(479, 51, 548)
         ));
         riftDataMap.put("Rift4", new RiftData(
-            new Location(Bukkit.getWorld("Arnhold"), 164, 54, 104),
-            BlockVector3.at(164, 54, 104),
-            BlockVector3.at(161, 64, 103)
+                new Location(Bukkit.getWorld("Arnhold"), 164, 54, 104),
+                BlockVector3.at(164, 54, 104),
+                BlockVector3.at(161, 64, 103)
         ));
         riftDataMap.put("Rift5", new RiftData(
-            new Location(Bukkit.getWorld("Arnhold"), -759, 47, 163),
-            BlockVector3.at(-759, 47, 163),
-            BlockVector3.at(-757, 52, 158)
+                new Location(Bukkit.getWorld("Arnhold"), -759, 47, 163),
+                BlockVector3.at(-759, 47, 163),
+                BlockVector3.at(-757, 52, 158)
         ));
         riftDataMap.put("Rift6", new RiftData(
-            new Location(Bukkit.getWorld("Arnhold"), -1130, 52, -265),
-            BlockVector3.at(-1130, 52, -265),
-            BlockVector3.at(-1129, 59, -265)
+                new Location(Bukkit.getWorld("Arnhold"), -1130, 52, -265),
+                BlockVector3.at(-1130, 52, -265),
+                BlockVector3.at(-1129, 59, -265)
         ));
         riftDataMap.put("Rift7", new RiftData(
-            new Location(Bukkit.getWorld("Arnhold"), -87, 60, -332),
-            BlockVector3.at(-87, 60, -332),
-            BlockVector3.at(-82, 62, -336)
+                new Location(Bukkit.getWorld("Arnhold"), -87, 60, -332),
+                BlockVector3.at(-87, 60, -332),
+                BlockVector3.at(-82, 62, -336)
         ));
         riftDataMap.put("Rift8", new RiftData(
-            new Location(Bukkit.getWorld("Arnhold"), -633, 50, -136),
-            BlockVector3.at(-633, 50, -136),
-            BlockVector3.at(-640, 60, -135)
+                new Location(Bukkit.getWorld("Arnhold"), -633, 50, -136),
+                BlockVector3.at(-633, 50, -136),
+                BlockVector3.at(-640, 60, -135)
         ));
         riftDataMap.put("Rift9", new RiftData(
-            new Location(Bukkit.getWorld("Arnhold"), -581, 47, -838),
-            BlockVector3.at(-581, 47, -838),
-            BlockVector3.at(-585, 54, -835)
+                new Location(Bukkit.getWorld("Arnhold"), -581, 47, -838),
+                BlockVector3.at(-581, 47, -838),
+                BlockVector3.at(-585, 54, -835)
         ));
     }
 
@@ -93,17 +98,16 @@ public class RiftManager {
             player.sendMessage("§cРазлом с именем " + riftName + " не найден!");
             return;
         }
-    
+
         String schematicFileName = open ? ("open_" + riftName.toLowerCase() + ".schem") : ("close_" + riftName.toLowerCase() + ".schem");
         File schematicFile = new File(plugin.getDataFolder(), schematicFileName);
-    
+
         if (!schematicFile.exists()) {
             player.sendMessage("§cСхематик '" + schematicFileName + "' не найден!");
             return;
         }
-    
-        try (FileInputStream fis = new FileInputStream(schematicFile);
-             ClipboardReader reader = ClipboardFormats.findByFile(schematicFile).getReader(fis)) {
+
+        try (FileInputStream fis = new FileInputStream(schematicFile); ClipboardReader reader = ClipboardFormats.findByFile(schematicFile).getReader(fis)) {
             Clipboard clipboard = reader.read();
             try (EditSession editSession = WorldEdit.getInstance().newEditSession(BukkitAdapter.adapt(riftData.getLocation().getWorld()))) {
                 ClipboardHolder holder = new ClipboardHolder(clipboard);
@@ -111,7 +115,7 @@ public class RiftManager {
                         .to(open ? riftData.getOpenPasteLocation() : riftData.getClosePasteLocation())
                         .ignoreAirBlocks(false)
                         .build());
-    
+
                 String action = open ? "открыт" : "закрыт";
                 player.sendMessage("§aРазлом '" + riftName + "' был успешно " + action + "!");
 
@@ -134,17 +138,15 @@ public class RiftManager {
         }.runTaskTimer(plugin, 0L, 20L);
     }
 
-
-
     private void teleportNearbyPlayers(Location center, int radius, int yOffset) {
         center.getWorld().getPlayers().stream()
-            .filter(player -> player.getLocation().distance(center) <= radius)
-            .forEach(player -> {
-                Location newLocation = player.getLocation().clone().add(0, yOffset, 0);
-                player.teleport(newLocation);
-                player.sendMessage("§eВас телепортировало из зоны разлома!");
-                plugin.getLogger().info("Игрок " + player.getName() + " телепортирован на " + newLocation.toString());
-            });
+                .filter(player -> player.getLocation().distance(center) <= radius)
+                .forEach(player -> {
+                    Location newLocation = player.getLocation().clone().add(0, yOffset, 0);
+                    player.teleport(newLocation);
+                    player.sendMessage("§eВас телепортировало из зоны разлома!");
+                    plugin.getLogger().info("Игрок " + player.getName() + " телепортирован на " + newLocation.toString());
+                });
     }
 
     public void monitorPlayersInRift(String riftName) {
@@ -153,18 +155,18 @@ public class RiftManager {
             plugin.getLogger().warning("Разлом с именем " + riftName + " не найден!");
             return;
         }
-    
+
         Map<UUID, Long> localPlayerStayTime = new HashMap<>();
-    
+
         new BukkitRunnable() {
             @Override
             public void run() {
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     Location playerLocation = player.getLocation();
                     Location riftLocation = riftData.getLocation();
-    
+
                     double distance = playerLocation.distance(riftLocation);
-    
+
                     if (distance <= 2.0) {
                         UUID playerUUID = player.getUniqueId();
                         if (!localPlayerStayTime.containsKey(playerUUID)) {
@@ -175,15 +177,14 @@ public class RiftManager {
                             long elapsedTime = System.currentTimeMillis() - localPlayerStayTime.get(playerUUID);
                             player.sendMessage("§eВы находитесь в зоне разлома " + (elapsedTime / 1000) + " секунд.");
                             plugin.getLogger().info("Игрок " + player.getName() + " находится в зоне разлома " + (elapsedTime / 1000) + " секунд.");
-    
+
                             if (elapsedTime >= 5000) {
                                 closeRift(riftName, player);
                                 Bukkit.broadcastMessage(String.format("§f[Ковенант] Игрок §a%s §fзакрыл разлом '%s'!", player.getName(), riftName));
                                 teleportNearbyPlayers(riftLocation, 20, 10);
                                 localPlayerStayTime.clear();
                                 plugin.getLogger().info("Разлом " + riftName + " закрыт игроком " + player.getName() + ".");
-    
-                            
+
                                 updatePlayerStats(player.getName());
                                 cancel();
                             }
@@ -200,18 +201,17 @@ public class RiftManager {
             }
         }.runTaskTimer(plugin, 0L, 20L);
     }
-    
-    
+
     private void updatePlayerStats(String playerName) {
         File file = new File(plugin.getDataFolder(), "listOfTopPlayers.yml");
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);
-    
+
         String path = "closedRiftsByPlayer." + playerName;
-        int closedRifts = config.getInt(path, 0); 
-        config.set(path, closedRifts + 1); 
-    
+        int closedRifts = config.getInt(path, 0);
+        config.set(path, closedRifts + 1);
+
         try {
-            config.save(file); 
+            config.save(file);
         } catch (IOException e) {
             plugin.getLogger().severe("Не удалось сохранить файл listOfTopPlayers.yml!");
             e.printStackTrace();
@@ -223,11 +223,55 @@ public class RiftManager {
         monitorPlayersInRift(riftName);
     }
 
+    private void dropRewardItems(Location location) {
+        
+        Location rewardLocation = location.clone().add(0, 10, 0);
+
+        
+        ItemStack rewardItem = OraxenItems.getItemById("ihor").build();  
+
+        
+        new BukkitRunnable() {
+            private int count = 0;
+
+            @Override
+            public void run() {
+                if (count < 5) {
+                    
+                    Item item = location.getWorld().dropItem(rewardLocation.clone().add(randomOffset(), randomOffset(), randomOffset()), rewardItem);
+
+                    
+                    plugin.getLogger().info("Предмет 'ihor' упал на " + item.getLocation().toString());
+
+                    
+                    item.setVelocity(new Vector(0, -0.5, 0));  
+
+                    
+                    count++;
+                } else {
+                    
+                    cancel();
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 10L);  
+    }
+
+    
+    private double randomOffset() {
+        return (Math.random() - 0.5) * 0.5;  
+    }
+
     public void closeRift(String riftName, Player player) {
         toggleRift(riftName, false, player);
+
+        RiftData riftData = riftDataMap.get(riftName);
+        if (riftData != null) {
+            dropRewardItems(riftData.getLocation());
+        }
     }
 
     private static class RiftData {
+
         private final Location location;
         private final BlockVector3 openPasteLocation;
         private final BlockVector3 closePasteLocation;
