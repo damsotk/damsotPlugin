@@ -3,6 +3,7 @@ package com.damsotplugin;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -15,6 +16,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
@@ -27,7 +29,7 @@ import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
 import com.sk89q.worldedit.function.operation.Operations;
 import com.sk89q.worldedit.math.BlockVector3;
-import com.sk89q.worldedit.session.ClipboardHolder;
+import com.sk89q.worldedit.session.ClipboardHolder; 
 
 import io.th0rgal.oraxen.api.OraxenItems;
 
@@ -120,6 +122,11 @@ public class RiftManager {
                 player.sendMessage("§aРазлом '" + riftName + "' был успешно " + action + "!");
 
                 if (open) {
+                    
+                    Bukkit.broadcastMessage("§7[§8Троица§7] §7Внимание Церебрум! Дестабилизация.");
+                    Bukkit.broadcastMessage("§7[§8Троица§7] §7Где-то был открыт разлом.");
+
+                    
                     spawnParticles(riftData.getLocation());
                 }
             }
@@ -180,7 +187,7 @@ public class RiftManager {
 
                             if (elapsedTime >= 5000) {
                                 closeRift(riftName, player);
-                                Bukkit.broadcastMessage(String.format("§f[Ковенант] Игрок §a%s §fзакрыл разлом '%s'!", player.getName(), riftName));
+                                Bukkit.broadcastMessage(String.format("§7[§8Троица§7] §7Отголосок §7%s §7закрыл разлом!", player.getName(), riftName));
                                 teleportNearbyPlayers(riftLocation, 20, 10);
                                 localPlayerStayTime.clear();
                                 plugin.getLogger().info("Разлом " + riftName + " закрыт игроком " + player.getName() + ".");
@@ -224,13 +231,24 @@ public class RiftManager {
     }
 
     private void dropRewardItems(Location location) {
-        
         Location rewardLocation = location.clone().add(0, 10, 0);
 
         
-        ItemStack rewardItem = OraxenItems.getItemById("ihor").build();  
+        ItemStack rewardItem = OraxenItems.getItemById("ihor").build();
 
         
+        ItemMeta meta = rewardItem.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§aИхор"); 
+            meta.setLore(Arrays.asList(
+                    " ",
+                    "§7§lЦенный ресурс",
+                    "§7Кристаллы для",
+                    "§7Алхимии и магии"
+            ));
+            rewardItem.setItemMeta(meta);
+        }
+
         new BukkitRunnable() {
             private int count = 0;
 
@@ -241,24 +259,21 @@ public class RiftManager {
                     Item item = location.getWorld().dropItem(rewardLocation.clone().add(randomOffset(), randomOffset(), randomOffset()), rewardItem);
 
                     
-                    plugin.getLogger().info("Предмет 'ihor' упал на " + item.getLocation().toString());
+                    plugin.getLogger().info("Предмет 'Ихор' упал на " + item.getLocation().toString());
 
                     
-                    item.setVelocity(new Vector(0, -0.5, 0));  
+                    item.setVelocity(new Vector(0, -0.5, 0));
 
-                    
                     count++;
                 } else {
-                    
                     cancel();
                 }
             }
-        }.runTaskTimer(plugin, 0L, 10L);  
+        }.runTaskTimer(plugin, 0L, 10L); 
     }
 
-    
     private double randomOffset() {
-        return (Math.random() - 0.5) * 0.5;  
+        return (Math.random() - 0.5) * 0.5;
     }
 
     public void closeRift(String riftName, Player player) {

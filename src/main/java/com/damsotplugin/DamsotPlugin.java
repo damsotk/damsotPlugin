@@ -32,7 +32,7 @@ public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listene
         getCommand("viewteam").setExecutor(teamManager);
 
         // getCommand("checkTownyLocation").setExecutor(new MobSpawnaddon());
-        new MobSpawnAddon();
+        // new MobSpawnAddon();
     }
 
     public static DamsotPlugin getInstance() {
@@ -41,7 +41,7 @@ public class DamsotPlugin extends JavaPlugin implements CommandExecutor, Listene
 
     @Override
     public void onDisable() {
-        // Cleanup resources if necessary
+        
     }
 
     

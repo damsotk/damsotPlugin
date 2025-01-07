@@ -25,6 +25,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
@@ -70,15 +71,27 @@ public class magicCerebrum implements Listener {
         if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
             Player player = event.getPlayer();
             ItemStack item = player.getInventory().getItemInMainHand();
-
+    
             if (item.getType() == Material.ENCHANTED_BOOK && item.hasItemMeta()) {
                 ItemMeta meta = item.getItemMeta();
-
+    
                 if (meta.hasDisplayName()) {
                     String spellName = extractSpellName(meta.getDisplayName());
-
+    
                     if (!spellName.isEmpty()) {
-                        learnSpell(player, spellName);
+                    
+                        if (learnSpell(player, spellName)) {
+                            
+                            int newAmount = item.getAmount() - 1;
+                            if (newAmount > 0) {
+                                item.setAmount(newAmount);
+                            } else {
+                                player.getInventory().setItemInMainHand(null);
+                            }
+                            player.sendMessage("§aКнига заклинания использована.");
+                        } else {
+                            player.sendMessage("§cВы уже изучили это заклинание.");
+                        }
                     } else {
                         player.sendMessage("§cЭто не заклинание для изучения.");
                     }
@@ -88,40 +101,33 @@ public class magicCerebrum implements Listener {
     }
 
     private boolean isSpellLearned(Player player, String spellName) {
-        String playerName = player.getName(); 
+        String playerName = player.getName();
         String normalizedSpellName = spellName.trim().toLowerCase();
-        
-        
+
         System.out.println("Игрок: " + playerName + " пытается использовать заклинание: " + spellName);
         System.out.println("Заклинание в нижнем регистре и без пробелов: " + normalizedSpellName);
-    
-        
-        
+
         if (learnedSpells.containsKey(playerName)) {
             System.out.println("Изученные заклинания игрока " + playerName + ": " + learnedSpells.get(playerName));
         } else {
             System.out.println("У игрока " + playerName + " нет изученных заклинаний.");
         }
-    
-        
+
         Set<String> learnedSpellsSet = learnedSpells.get(playerName);
         if (learnedSpellsSet != null) {
-           
+
             Set<String> normalizedLearnedSpells = new HashSet<>();
             for (String spell : learnedSpellsSet) {
                 normalizedLearnedSpells.add(spell.trim().toLowerCase());
             }
-    
-            
+
             System.out.println("Нормализованные изученные заклинания: " + normalizedLearnedSpells);
-            
-            
+
             boolean isLearned = normalizedLearnedSpells.contains(normalizedSpellName);
             System.out.println("Заклинание " + normalizedSpellName + " изучено: " + isLearned);
             return isLearned;
         }
-    
-        
+
         return false;
     }
 
@@ -155,99 +161,158 @@ public class magicCerebrum implements Listener {
         return "";
     }
 
-    private void learnSpell(Player player, String spellName) {
+    private boolean learnSpell(Player player, String spellName) {
         String playerName = player.getName();
-
+    
         if (learnedSpells.computeIfAbsent(playerName, k -> new HashSet<>()).contains(spellName)) {
-            player.sendMessage("§6Вы уже изучили это заклинание!");
-            return;
+            return false; 
         }
-
+    
         learnedSpells.get(playerName).add(spellName);
         player.sendMessage("§aВы изучили заклинание: " + spellName);
         saveLearnedSpells();
+        return true; 
     }
 
     @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
-        String message = event.getMessage().toLowerCase();  
-    
+        String message = event.getMessage().toLowerCase();
+
         ItemStack item = player.getInventory().getItemInMainHand();
-    
-        
+
         if (item.getType() == Material.PAPER && item.hasItemMeta()) {
             ItemMeta meta = item.getItemMeta();
-    
+
             if (meta != null && meta.hasDisplayName() && meta.getDisplayName().equals("§6Книга заклинаний")) {
-                
-                Set<String> learnedSpellsSet = learnedSpells.get(player.getName());  
+
+                Set<String> learnedSpellsSet = learnedSpells.get(player.getName());
                 System.out.println("Игрок " + player.getName() + " пытается использовать заклинание: " + message);
                 System.out.println("Изученные заклинания игрока: " + (learnedSpellsSet != null ? learnedSpellsSet.toString() : "Нет изученных заклинаний"));
-    
-               
+
                 if (isSpellLearned(player, message)) {
-                    
+                    int resourceCost = 0;
+
                     switch (message) {
                         case "неодолео":
-                            handleNeodoleoSpell(player);
+                            resourceCost = 25;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleNeodoleoSpell(player);
+                            }
                             break;
                         case "октаниум":
-                            handleOktaniumSpell(player);
+                            resourceCost = 15;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleOktaniumSpell(player);
+                            }
                             break;
                         case "реактио":
-                            handleReaktioSpell(player);
+                            resourceCost = 15;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleReaktioSpell(player);
+                            }
                             break;
                         case "заживгом":
-                            handleZazhivgomSpell(player);
+                            resourceCost = 5;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleZazhivgomSpell(player);
+                            }
                             break;
                         case "свежиум":
-                            handleSvezhiumSpell(player);
+                            resourceCost = 5;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleSvezhiumSpell(player);
+                            }
                             break;
                         case "слептио":
-                            handleSleptioSpell(player);
+                            resourceCost = 5;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleSleptioSpell(player);
+                            }
                             break;
                         case "крик":
-                            handleKrikSpell(player);
+                            resourceCost = 5;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleKrikSpell(player);
+                            }
                             break;
                         case "джастис":
-                            handleJusticeSpell(player);
+                            resourceCost = 15;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleJusticeSpell(player);
+                            }
                             break;
                         case "просвектико":
-                            handleProsvecticoSpell(player);
+                            resourceCost = 15;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleProsvecticoSpell(player);
+                            }
                             break;
                         case "реактим":
-                            handleReaktimSpell(player);
+                            resourceCost = 15;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleReaktimSpell(player);
+                            }
                             break;
                         case "кастрем":
-                            handleKastremSpell(player);
+                            resourceCost = 25;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleKastremSpell(player);
+                            }
                             break;
                         case "сумасвод":
-                            handleSumasvodSpell(player);
+                            resourceCost = 25;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleSumasvodSpell(player);
+                            }
                             break;
                         case "травл":
-                            handleTravalSpell(player);
+                            resourceCost = 5;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleTravalSpell(player);
+                            }
                             break;
                         case "левето":
-                            handleLevetoSpell(player);
+                            resourceCost = 5;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleLevetoSpell(player);
+                            }
                             break;
                         case "уравниум":
-                            handleUravniumSpell(player);
+                            resourceCost = 15;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleUravniumSpell(player);
+                            }
                             break;
                         case "полектум":
-                            handlePolectumSpell(player);
+                            resourceCost = 15;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handlePolectumSpell(player);
+                            }
                             break;
                         case "защитнум":
-                            handleZashitnumSpell(player);
+                            resourceCost = 15;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleZashitnumSpell(player);
+                            }
                             break;
                         case "регенио":
-                            handleRegenioSpell(player);
+                            resourceCost = 15;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleRegenioSpell(player);
+                            }
                             break;
                         case "утоптикум":
-                            handleUtopiticumSpell(player);
+                            resourceCost = 25;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleUtopiticumSpell(player);
+                            }
                             break;
                         case "невидумс":
-                            handleNevidumsSpell(player);
+                            resourceCost = 25;
+                            if (consumeResource(player, "§aИхор", resourceCost)) {
+                                handleNevidumsSpell(player);
+                            }
                             break;
                         default:
                             player.sendMessage("§cВы не знаете такого заклинания!");
@@ -257,6 +322,40 @@ public class magicCerebrum implements Listener {
                     player.sendMessage("§cВы ещё не изучили это заклинание.");
                 }
             }
+        }
+    }
+
+    private boolean consumeResource(Player player, String resourceName, int amount) {
+        Inventory inventory = player.getInventory();
+        int totalAmount = 0;
+
+        // Сканируем инвентарь на наличие ресурса
+        for (ItemStack item : inventory.getContents()) {
+            if (item != null && item.getItemMeta() != null && resourceName.equals(item.getItemMeta().getDisplayName())) {
+                totalAmount += item.getAmount();
+            }
+        }
+
+        // Проверяем, достаточно ли ресурса
+        if (totalAmount >= amount) {
+            int remaining = amount;
+
+            // Удаляем нужное количество ресурса
+            for (ItemStack item : inventory.getContents()) {
+                if (item != null && item.getItemMeta() != null && resourceName.equals(item.getItemMeta().getDisplayName())) {
+                    if (item.getAmount() <= remaining) {
+                        remaining -= item.getAmount();
+                        inventory.remove(item);
+                    } else {
+                        item.setAmount(item.getAmount() - remaining);
+                        break;
+                    }
+                }
+            }
+            return true;
+        } else {
+            player.sendMessage("§cУ вас недостаточно ресурса " + resourceName + " для использования заклинания.");
+            return false;
         }
     }
 

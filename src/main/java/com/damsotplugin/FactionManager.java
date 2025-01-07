@@ -5,6 +5,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +21,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -31,7 +33,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.yaml.snakeyaml.Yaml;
 
-import io.th0rgal.oraxen.api.OraxenItems;
+import io.th0rgal.oraxen.api.OraxenItems; 
 import me.clip.placeholderapi.PlaceholderAPI;
 
 public class FactionManager implements CommandExecutor, Listener {
@@ -194,9 +196,8 @@ public class FactionManager implements CommandExecutor, Listener {
             String pointName = entry.getKey();
             String ownerFaction = entry.getValue();
 
-            
-            String iconId = "icon_avanpost" + (i - 48 + 1); 
-            ItemStack pointItem = OraxenItems.getItemById(iconId).build(); 
+            String iconId = "icon_avanpost" + (i - 48 + 1);
+            ItemStack pointItem = OraxenItems.getItemById(iconId).build();
 
             ItemMeta pointMeta = pointItem.getItemMeta();
             if (pointMeta != null) {
@@ -206,7 +207,6 @@ public class FactionManager implements CommandExecutor, Listener {
 
                 lore.add("§7Владелец: " + ownerFaction);
 
-                
                 switch (pointName) {
                     case "Заброшенная шахта":
                         lore.add("§8Когда-то здесь копали ихор");
@@ -222,7 +222,6 @@ public class FactionManager implements CommandExecutor, Listener {
                         break;
                 }
 
-                
                 lore.add("§7Кол-во данного ресурса " + pointTreasuries.get(pointName).getOrDefault(faction, 0));
 
                 pointMeta.setLore(lore);
@@ -241,7 +240,6 @@ public class FactionManager implements CommandExecutor, Listener {
             menuCommandItem.setItemMeta(menuCommandMeta);
         }
 
-        
         menu.setItem(8, menuCommandItem);
 
         player.openInventory(menu);
@@ -266,13 +264,11 @@ public class FactionManager implements CommandExecutor, Listener {
         for (Map.Entry<String, Location> entry : capturePointLocations.entrySet()) {
             String pointName = entry.getKey();
             Location pointLocation = entry.getValue();
-            String ownerFaction = capturePoints.get(pointName); 
+            String ownerFaction = capturePoints.get(pointName);
 
-            
             if (playerLocation.getWorld().equals(pointLocation.getWorld())
                     && playerLocation.distance(pointLocation) < 9.0) {
 
-                
                 if (faction.equals(ownerFaction)) {
                     return;
                 }
@@ -344,7 +340,7 @@ public class FactionManager implements CommandExecutor, Listener {
                     saveFactionData();
                 }
             });
-        }, 0L, 24000L);
+        }, 0L, 48000L);
     }
 
     @EventHandler
@@ -364,18 +360,24 @@ public class FactionManager implements CommandExecutor, Listener {
 
                 String pointName = getPointNameFromItem(clickedItem);
 
-                
                 if (clickedItem.hasItemMeta() && clickedItem.getItemMeta().hasDisplayName()) {
                     String itemName = clickedItem.getItemMeta().getDisplayName();
                     if (itemName.equals("§7Вернуться обратно в меню")) {
-                        
+
                         player.chat("/menu");
                         return;
                     }
                 }
 
                 if (pointName != null && !removeFormatting(pointName).equals("Неизвестная деревня") && pointResources.containsKey(pointName)) {
-                    String formattedPointName = removeFormatting(pointName);  
+                    // Проверяем, является ли игрок одним из разрешенных
+                    List<String> allowedPlayers = Arrays.asList("damsot", "BN_1", "Arnhold1", "Iwatani_Na0fumi","Eudes_Tabukorr");
+                    if (!allowedPlayers.contains(player.getName())) {
+                        player.sendMessage("§7[§8Троица§7] §7Только главы фракций могут это сделать.");
+                        return;
+                    }
+                
+                    String formattedPointName = removeFormatting(pointName);
                     int resourceAmount = pointTreasuries.get(formattedPointName).getOrDefault(faction, 0);
                     if (resourceAmount > 0) {
                         pointTreasuries.get(formattedPointName).put(faction, 0);
@@ -385,19 +387,33 @@ public class FactionManager implements CommandExecutor, Listener {
                         player.sendMessage("Сокровищница точки пуста.");
                     }
                 } else if (pointName != null && removeFormatting(pointName).equals("Росток")) {
-                    String formattedPointName = removeFormatting(pointName);  
+                    // Проверяем, является ли игрок одним из разрешенных
+                    List<String> allowedPlayers = Arrays.asList("damsot", "BN_1", "Arnhold1","Iwatani_Na0fumi","Eudes_Tabukorr");
+                    if (!allowedPlayers.contains(player.getName())) {
+                        player.sendMessage("§7[§8Троица§7] §7Только главы фракций могут это сделать.");
+                        return;
+                    }
+                
+                    String formattedPointName = removeFormatting(pointName);
                     int resourceAmount = pointTreasuries.get(formattedPointName).getOrDefault(faction, 0);
                     if (resourceAmount > 0) {
                         pointTreasuries.get(formattedPointName).put(faction, 0);
                         for (int i = 0; i < resourceAmount; i++) {
-                            player.getInventory().addItem(generateRandomEnchantedBook());  
+                            player.getInventory().addItem(generateRandomEnchantedBook());
                         }
                         player.sendMessage("Вы забрали зачарованные книги из сокровищницы " + pointName + ".");
                     } else {
                         player.sendMessage("Сокровищница точки пуста.");
                     }
                 } else if (pointName != null && removeFormatting(pointName).equals("Неизвестная деревня")) {
-                    String formattedPointName = removeFormatting(pointName);  
+                    // Проверяем, является ли игрок одним из разрешенных
+                    List<String> allowedPlayers = Arrays.asList("damsot", "BN_1", "Arnhold1", "Iwatani_Na0fumi", "Eudes_Tabukorr");
+                    if (!allowedPlayers.contains(player.getName())) {
+                        player.sendMessage("§7[§8Троица§7] §7Только главы фракций могут это сделать.");
+                        return;
+                    }
+                
+                    String formattedPointName = removeFormatting(pointName);
                     int resourceAmount = pointTreasuries.get(formattedPointName).getOrDefault(faction, 0);
                     if (resourceAmount > 0) {
                         pointTreasuries.get(formattedPointName).put(faction, 0);
@@ -414,34 +430,35 @@ public class FactionManager implements CommandExecutor, Listener {
     }
 
     private String removeFormatting(String input) {
-        return input.replaceAll("§[0-9a-fk-or]", "");  
+        return input.replaceAll("§[0-9a-fk-or]", "");
     }
 
     private ItemStack generateRandomBook() {
         double random = Math.random();
-        String title = "&7Обычныя свиток";
+        String title = "&7Обычный свиток";
         String lore2 = " ";
         String lore3 = "&7&lМагический предмет";
         String lore4 = "&7Для обмена у торговца";
-
-        if (random < 0.7) {
-            title = "&7Обычныя свиток";
-        } else if (random < 0.9) {
-            title = "&5Редкий свиток";
+    
+        // Установим шансы
+        if (random < 0.95) {
+            title = "&7Обычный свиток"; // 95%
+        } else if (random < 0.99) {
+            title = "&5Редкий свиток"; // 4%
         } else {
-            title = "&6Легендарный свиток";
+            title = "&6Легендарный свиток"; // 1%
         }
-
-        
+    
+        // Преобразуем цвета
         title = ChatColor.translateAlternateColorCodes('&', title);
         lore2 = ChatColor.translateAlternateColorCodes('&', lore2);
         lore3 = ChatColor.translateAlternateColorCodes('&', lore3);
         lore4 = ChatColor.translateAlternateColorCodes('&', lore4);
-
-       
+    
+        // Создаем предмет
         ItemStack book = new ItemStack(Material.MOJANG_BANNER_PATTERN);
         ItemMeta meta = book.getItemMeta();
-
+    
         if (meta != null) {
             meta.setDisplayName(title);
             List<String> loreList = new ArrayList<>();
@@ -451,23 +468,21 @@ public class FactionManager implements CommandExecutor, Listener {
             meta.setLore(loreList);
             book.setItemMeta(meta);
         }
-
+    
         return book;
     }
-
     private ItemStack generateRandomEnchantedBook() {
-        
+
         Enchantment[] enchantments = Enchantment.values();
         Random random = new Random();
         Enchantment randomEnchantment = enchantments[random.nextInt(enchantments.length)];
         int level = random.nextInt(randomEnchantment.getMaxLevel()) + 1;
 
-        
         ItemStack book = new ItemStack(Material.ENCHANTED_BOOK);
         ItemMeta meta = book.getItemMeta();
 
         if (meta != null) {
-            meta.addEnchant(randomEnchantment, level, true);  
+            meta.addEnchant(randomEnchantment, level, true);
             book.setItemMeta(meta);
         }
 
@@ -570,6 +585,23 @@ public class FactionManager implements CommandExecutor, Listener {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (command.getName().equalsIgnoreCase("fracadd")) {
+            // Разрешенные игроки
+            List<String> allowedPlayers = Arrays.asList("damsot", "Arnhold01");
+
+            // Проверка, если отправитель — игрок, и не находится в списке разрешенных
+            if (sender instanceof Player) {
+                Player player = (Player) sender;
+                if (!allowedPlayers.contains(player.getName())) {
+                    sender.sendMessage("Вы не имеете права использовать эту команду.");
+                    return true;
+                }
+            } else if (!(sender instanceof ConsoleCommandSender)) {
+                // Если команда вызвана не из консоли и не игроком
+                sender.sendMessage("Эту команду можно выполнять только игрокам или из консоли.");
+                return true;
+            }
+
+            // Проверка на количество аргументов
             if (args.length < 2) {
                 sender.sendMessage("Использование: /fracadd <ник> <название_фракции>");
                 return true;
@@ -578,6 +610,7 @@ public class FactionManager implements CommandExecutor, Listener {
             String playerName = args[0];
             String faction = args[1];
 
+            // Проверка фракции
             if (!allowedFactions.contains(faction)) {
                 sender.sendMessage("Неверное название фракции. Разрешенные фракции: " + allowedFactions);
                 return true;
